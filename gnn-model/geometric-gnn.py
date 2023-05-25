@@ -19,11 +19,11 @@ import sys
 class GNN(torch.nn.Module):
     def __init__(self, input_size, hidden_channels):
         super(GNN, self).__init__()
-        self.conv1 = GCNConv(
+        self.conv1 = GATConv(
             input_size, hidden_channels)
-        self.conv2 = GCNConv(
+        self.conv2 = GATConv(
             hidden_channels, hidden_channels)
-        self.conv3 = GCNConv(
+        self.conv3 = GATConv(
             hidden_channels, hidden_channels)
         self.lin = Linear(hidden_channels, 2)
     
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     print(f'Total Number of Graphs: {len(data_list)}, Number of Graphs for Training: {len(data_list_train)}, Number of Graphs for Tests: {len(data_list_test)}')
 
     train_epoch = 200
-    batch_size = 32
+    batch_size = 64
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = GNN(1, 64).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)

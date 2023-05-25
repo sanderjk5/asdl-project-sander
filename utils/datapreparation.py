@@ -1,14 +1,19 @@
 from utils.msgpackutils import load_msgpack_l_gz
 from dpu_utils.utils import RichPath
+from dpu_utils.codeutils import split_identifier_into_parts
 import torch
 from torch_geometric.data import Data
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
+import re
+
+IS_IDENTIFIER = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")
 
 def prepareData(dataset_dir: RichPath):
     assert dataset_dir.exists()
 
     datalist = []
     num_diff_nodes, num_diff_edge_attr = 0, 0
-    node_idx, edge_attr_idx = {}, {}
+    node_label_vocab, edge_attr_vocab = {}, {}
 
     for pkg_file in dataset_dir.rglob("*.msgpack.l.gz"):
         try:
@@ -17,12 +22,42 @@ def prepareData(dataset_dir: RichPath):
                     continue
                 nodes = []
                 for node in graph["graph"]["nodes"]:
-                    if node in node_idx.keys():
-                        nodes.append([node_idx[node]])
+                    if node in node_label_vocab.keys():
+                        nodes.append([node_label_vocab[node]])
                     else:
                         nodes.append([num_diff_nodes])
-                        node_idx[node] = num_diff_nodes
+                        node_label_vocab[node] = num_diff_nodes
                         num_diff_nodes += 1
+
+                token_nodes = set()
+                if "NextToken" in graph["graph"]["edges"]:
+                    for n1, n2 in graph["graph"]["edges"]["NextToken"]:
+                        token_nodes.add(n1)
+                        token_nodes.add(n2)
+
+                    subtoken_idxs: Dict[int, int] = {}
+                    vocab_edges: List[Tuple[int, int]] = []
+
+                    all_nodes = graph["graph"]["nodes"]
+                    for node_idx in token_nodes:
+                        token_str = all_nodes[node_idx]
+                        if not IS_IDENTIFIER.match(token_str):
+                            continue
+                        for subtoken in split_identifier_into_parts(token_str):
+                            subtoken_node_value = node_label_vocab.get(subtoken)
+                            if subtoken_node_value is None:
+                                subtoken_node_value = num_diff_nodes
+                                node_label_vocab[subtoken] = subtoken_node_value
+                                num_diff_nodes += 1
+                            subtoken_idx = subtoken_idxs.get(subtoken_node_value)
+                            if subtoken_idx is None:
+                                subtoken_idx = len(all_nodes)
+                                all_nodes.append(subtoken)
+                                nodes.append([subtoken_node_value])
+                                subtoken_idxs[subtoken_node_value] = subtoken_idx
+                            vocab_edges.append((node_idx, subtoken_idx))
+
+                    graph["graph"]["edges"]["HasSubtoken"] = vocab_edges
                 
                 x = torch.tensor(nodes, dtype=torch.float)
                 outgoing_edges, incoming_edges, edge_attributes = [], [], []
@@ -30,11 +65,11 @@ def prepareData(dataset_dir: RichPath):
                     for edge in graph["graph"]["edges"][key]:
                         outgoing_edges.append(edge[0])
                         incoming_edges.append(edge[1])
-                        if key in edge_attr_idx.keys():
-                            edge_attributes.append([edge_attr_idx[key]])
+                        if key in edge_attr_vocab.keys():
+                            edge_attributes.append([edge_attr_vocab[key]])
                         else:
                             edge_attributes.append([num_diff_edge_attr])
-                            edge_attr_idx[key] = num_diff_edge_attr
+                            edge_attr_vocab[key] = num_diff_edge_attr
                             num_diff_edge_attr += 1
                 edge_index = torch.tensor([outgoing_edges,
                            incoming_edges], dtype=torch.long)
