@@ -1,11 +1,8 @@
 import gzip
-import random
 from collections import OrderedDict
 from os import PathLike
-from typing import Any, Iterator, Optional
-
+from typing import Any, Iterator
 import msgpack
-from dpu_utils.utils import RichPath
 
 
 def load_msgpack_l_gz(filename: PathLike) -> Iterator[Any]:
