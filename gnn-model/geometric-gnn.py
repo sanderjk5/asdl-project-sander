@@ -25,6 +25,12 @@ class GNN(torch.nn.Module):
             hidden_channels, hidden_channels)
         self.conv3 = GATConv(
             hidden_channels, hidden_channels)
+        self.conv4 = GATConv(
+            input_size, hidden_channels)
+        self.conv5 = GATConv(
+            hidden_channels, hidden_channels)
+        self.conv6 = GATConv(
+            hidden_channels, hidden_channels)
         self.lin = Linear(hidden_channels, 2)
     
     def forward(self, x, edge_index, batch,  edge_attr):
@@ -33,6 +39,12 @@ class GNN(torch.nn.Module):
         x = self.conv2(x, edge_index, edge_attr)
         x = x.relu()
         x = self.conv3(x, edge_index, edge_attr)
+        x = x.relu()
+        x = self.conv4(x, edge_index, edge_attr)
+        x = x.relu()
+        x = self.conv5(x, edge_index, edge_attr)
+        x = x.relu()
+        x = self.conv6(x, edge_index, edge_attr)
         
         x = global_mean_pool(x, batch)
         
@@ -72,7 +84,7 @@ if __name__ == "__main__":
     train_epoch = 200
     batch_size = 64
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = GNN(1, 64).to(device)
+    model = GNN(1, 128).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
     criterion = torch.nn.CrossEntropyLoss()
     train_loader = DataLoader(data_list_train, batch_size=batch_size, shuffle=True)
