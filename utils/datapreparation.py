@@ -15,6 +15,7 @@ def prepareData(dataset_dir: RichPath):
     datalist = []
     num_diff_nodes, num_diff_edge_attr = 0, 0
     node_label_vocab, edge_attr_vocab = create_vocabs(dataset_dir)
+    num_bug = 0
 
     for pkg_file in dataset_dir.rglob("*.msgpack.l.gz"):
         try:
@@ -70,7 +71,10 @@ def prepareData(dataset_dir: RichPath):
                     y_val = 0
                 else:
                     y_val = 1
+                    num_bug += 1
                 y = torch.tensor([y_val], dtype=torch.long)
+                if y_val == 1 and num_bug > 3517:
+                    continue
                 data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
                 datalist.append(data)
         except Exception as e:

@@ -16,6 +16,8 @@ from utils.datapreparation import prepareData
 import random
 import sys
 
+import matplotlib.pyplot as plt
+
 class GNN(torch.nn.Module):
     def __init__(self, input_size, hidden_channels):
         super(GNN, self).__init__()
@@ -42,6 +44,7 @@ class GNN(torch.nn.Module):
         return x
     
 def train(data_loader, model, optimizer, criterion): 
+    running_loss = 0
     model.train()
     for data in data_loader:
         optimizer.zero_grad()
@@ -49,6 +52,8 @@ def train(data_loader, model, optimizer, criterion):
         loss = criterion(out, data.y)
         loss.backward()
         optimizer.step()
+        running_loss += loss.item()
+    return running_loss/len(data_loader)
         
 def test(data_loader, model):
     model.eval()
@@ -69,7 +74,7 @@ if __name__ == "__main__":
     data_list_test = data_list[int(0.7*len(data_list)):]
     print(f'Total Number of Graphs: {len(data_list)}, Number of Graphs for Training: {len(data_list_train)}, Number of Graphs for Tests: {len(data_list_test)}')
 
-    train_epoch = 200
+    train_epoch = 20
     batch_size = 64
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = GNN(1, 64).to(device)
@@ -78,8 +83,21 @@ if __name__ == "__main__":
     train_loader = DataLoader(data_list_train, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(data_list_test, batch_size=batch_size, shuffle=True)
 
+    train_loader = DataLoader(data_list, batch_size=batch_size, shuffle=True)
+
+    losses = []
+
     for epoch in range (1, train_epoch+1):
-        train(train_loader, model, optimizer, criterion)
+        loss = train(train_loader, model, optimizer, criterion)
+        losses.append(loss)
         train_acc = test(train_loader, model)
-        test_acc = test(test_loader, model)
-        print(f'Epoch: {epoch:03d}, Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}')
+        #test_acc = test(test_loader, model)
+        #print(f'Epoch: {epoch:03d}, Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}')
+        print(f'Epoch: {epoch:03d}, Train Acc: {train_acc:.4f}, Loss: {loss:.4f}')
+    
+    plt.plot(losses)
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.show()
+
+    
