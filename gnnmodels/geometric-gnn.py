@@ -86,7 +86,7 @@ if __name__ == "__main__":
     data_list_test = data_list[int(0.7*len(data_list)):]
     print(f'Total Number of Graphs: {len(data_list)}, Number of Graphs for Training: {len(data_list_train)}, Number of Graphs for Tests: {len(data_list_test)}')
 
-    train_epoch = 20
+    train_epoch = 200
     batch_size = 64
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = GNN(1, 128).to(device)
