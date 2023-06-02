@@ -16,6 +16,7 @@ def prepareData(dataset_dir: RichPath):
     num_diff_nodes, num_diff_edge_attr = 0, 0
     node_label_vocab, edge_attr_vocab = create_vocabs(dataset_dir)
     num_bug = 0
+    num_no_bug = 0
 
     for pkg_file in dataset_dir.rglob("*.msgpack.l.gz"):
         try:
@@ -69,6 +70,7 @@ def prepareData(dataset_dir: RichPath):
                 edge_attr = torch.tensor(edge_attributes, dtype=torch.float)
                 if graph["target_fix_action_idx"] is None:
                     y_val = 0
+                    num_no_bug += 0
                 else:
                     y_val = 1
                     num_bug += 1
@@ -79,6 +81,7 @@ def prepareData(dataset_dir: RichPath):
                 datalist.append(data)
         except Exception as e:
             print(f"Error loading {pkg_file}: {e} Skipping...")
+    print(num_no_bug)
     return datalist
 
 def create_vocabs(dataset_dir: RichPath) -> Tuple[Vocabulary, Vocabulary]:
@@ -97,6 +100,6 @@ def create_vocabs(dataset_dir: RichPath) -> Tuple[Vocabulary, Vocabulary]:
 
         except Exception as e:
             print(f"Error loading {pkg_file}: {e} Skipping...")
-    node_vocab = Vocabulary.create_vocabulary(node_labels, max_size=300)
-    edge_type_vocab = Vocabulary.create_vocabulary(edge_types, max_size=300)
+    node_vocab = Vocabulary.create_vocabulary(node_labels, max_size=10000)
+    edge_type_vocab = Vocabulary.create_vocabulary(edge_types, max_size=10000)
     return node_vocab, edge_type_vocab

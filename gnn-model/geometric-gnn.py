@@ -50,7 +50,7 @@ class GNN(torch.nn.Module):
         
         x = global_mean_pool(x, batch)
         
-        x = F.dropout(x, p=0.5, training=self.training)
+        x = F.dropout(x, p=0.2, training=self.training)
         x = self.lin(x)
     
         return x
