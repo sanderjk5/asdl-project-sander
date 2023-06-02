@@ -1,5 +1,5 @@
 from typing_extensions import TypedDict
-from typing import Any, Counter, Dict, Iterator, List, NamedTuple, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, List, NamedTuple, Optional, Tuple, Union
 from ptgnn.neuralmodels.gnn import (
     GnnOutput,
     GraphData,
@@ -12,6 +12,9 @@ import numpy as np
 from dpu_utils.mlutils import Vocabulary
 import re
 from dpu_utils.codeutils import split_identifier_into_parts
+import torch
+
+from gnnmodels.bugfixgnn import BugLabData
 
 class BugLabGraph(TypedDict):
     nodes: List[str]
@@ -47,8 +50,16 @@ class BaseTensorizedBugLabGnn(NamedTuple):
     # Bug selection
     rewrite_logprobs: Optional[List[float]]
 
+Prediction = Tuple[BugLabData, Dict[int, float], List[float]]
+
 class BugFixModule(ModuleWithMetrics):
-    pass
+    def __init__(self, gnn: GraphNeuralNetwork):
+        super().__init__()
+        self.__gnn = gnn
+
+    def forward(self):
+        pass
+
 
 IS_IDENTIFIER = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")
 
@@ -56,11 +67,9 @@ class BugFixGnn(AbstractNeuralModel[BugLabData, BaseTensorizedBugLabGnn, BugFixM
     def __init__(
         self,
         gnn_model: GraphNeuralNetworkModel[str, Any],
-        max_num_classes: int = 100
     ):
         super().__init__()
         self.__gnn_model = gnn_model
-        self.max_num_classes = max_num_classes
 
     def __convert(self, buglab_data: BugLabData) -> Tuple[GraphData[str, None], Optional[int]]:
         token_nodes = set()
@@ -115,5 +124,45 @@ class BugFixGnn(AbstractNeuralModel[BugLabData, BaseTensorizedBugLabGnn, BugFixM
             reference_nodes=candidate_node_idxs
         ), target_node_idx)
     
-    def initialize_metadata(self) -> None:
-        return super().initialize_metadata()
+    def update_metadata_from(self, datapoint: BugLabData) -> None:
+        graph_data, _ = self.__convert(datapoint)
+        self.__gnn_model.update_metadata_from(graph_data)
+    
+    def build_neural_module(self) -> BugFixModule:
+        return BugFixModule(gnn=self.__gnn_model.build_neural_module())
+
+    def tensorize(self, datapoint: BugLabData) -> Optional[TensorizedGraphData]:
+        graph_data, target_node_idx = self.__convert(datapoint)
+        graph_tensorized_data = self.__gnn_model.tensorize(graph_data)
+
+        if graph_tensorized_data is None:
+            return None
+        
+        return BaseTensorizedBugLabGnn(graph_data=graph_tensorized_data)
+    
+    def initialize_minibatch(self) -> Dict[str, Any]:
+        return {"graph_mb_data": self.__gnn_model.initialize_minibatch()}
+    
+    def extend_minibatch_with(self, tensorized_datapoint: BaseTensorizedBugLabGnn, partial_minibatch: Dict[str, Any]) -> bool:
+        continue_extending = self.__gnn_model.extend_minibatch_with(tensorized_datapoint.graph_data, partial_minibatch["graph_mb_data"])
+        return continue_extending
+    
+    def finalize_minibatch(self, accumulated_minibatch_data: Dict[str, Any], device: Any) -> Dict[str, Any]:
+        return {"graph_mb_data": self.__gnn_model.finalize_minibatch(accumulated_minibatch_data["graph_mb_data"], device)}
+    
+    def predict(self, data: Iterator[BugLabData], trained_network: BugFixModule, device: Union[str, torch.device]) -> Iterator[Prediction]:
+        trained_network.eval()
+        with torch.no_grad():
+            
+            for mb_data, original_datapoints in self.minibatch_iterator(
+                self.tensorize_dataset(data, return_input_data=True, parallelize=False),
+                device,
+                max_minibatch_size=50,
+                parallelize=False
+            ):
+                current_graph_idx = 0
+                graph_preds: Dict[int, Tuple[str, float]] = {}
+
+                probs, predictions, graph_idxs = trained_network.predict(mb_data["graph_mb_data"])
+
+
