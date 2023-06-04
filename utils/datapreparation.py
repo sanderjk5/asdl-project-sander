@@ -75,8 +75,8 @@ def prepareData(dataset_dir: RichPath):
                     y_val = 1
                     num_bug += 1
                 y = torch.tensor([y_val], dtype=torch.long)
-                if y_val == 1 and num_bug > 3517:
-                    continue
+                # if y_val == 1 and num_bug > 3517:
+                #     continue
                 data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
                 datalist.append(data)
         except Exception as e:

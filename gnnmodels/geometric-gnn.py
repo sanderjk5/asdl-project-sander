@@ -28,7 +28,7 @@ class GNN(torch.nn.Module):
         self.conv3 = GATConv(
             hidden_channels, hidden_channels)
         self.conv4 = GATConv(
-            input_size, hidden_channels)
+            hidden_channels, hidden_channels)
         self.conv5 = GATConv(
             hidden_channels, hidden_channels)
         self.conv6 = GATConv(
@@ -55,15 +55,22 @@ class GNN(torch.nn.Module):
     
         return x
     
-def train(data_loader, model, optimizer, criterion): 
+def train(data_loader, model, optimizer, criterion, useScaler): 
     running_loss = 0
     model.train()
+    if useScaler:
+        scaler = torch.cuda.amp.GradScaler(enabled=False)
     for data in data_loader:
         optimizer.zero_grad()
         out = model(data.x, data.edge_index, data.batch, data.edge_attr)
         loss = criterion(out, data.y)
-        loss.backward()
-        optimizer.step()
+        if useScaler:
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            loss.backward()
+            optimizer.step()
         running_loss += loss.item()
     return running_loss/len(data_loader)
         
@@ -86,7 +93,7 @@ if __name__ == "__main__":
     data_list_test = data_list[int(0.7*len(data_list)):]
     print(f'Total Number of Graphs: {len(data_list)}, Number of Graphs for Training: {len(data_list_train)}, Number of Graphs for Tests: {len(data_list_test)}')
 
-    train_epoch = 200
+    train_epoch = 20
     batch_size = 64
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = GNN(1, 128).to(device)
@@ -95,17 +102,17 @@ if __name__ == "__main__":
     train_loader = DataLoader(data_list_train, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(data_list_test, batch_size=batch_size, shuffle=True)
 
-    train_loader = DataLoader(data_list, batch_size=batch_size, shuffle=True)
+    #train_loader = DataLoader(data_list, batch_size=batch_size, shuffle=True)
 
     losses = []
 
     for epoch in range (1, train_epoch+1):
-        loss = train(train_loader, model, optimizer, criterion)
+        loss = train(train_loader, model, optimizer, criterion, True)
         losses.append(loss)
         train_acc = test(train_loader, model)
-        #test_acc = test(test_loader, model)
-        #print(f'Epoch: {epoch:03d}, Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}')
-        print(f'Epoch: {epoch:03d}, Train Acc: {train_acc:.4f}, Loss: {loss:.4f}')
+        test_acc = test(test_loader, model)
+        print(f'Epoch: {epoch:03d}, Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}')
+        #print(f'Epoch: {epoch:03d}, Train Acc: {train_acc:.4f}, Loss: {loss:.4f}')
     
     plt.plot(losses)
     plt.ylabel('Loss')
