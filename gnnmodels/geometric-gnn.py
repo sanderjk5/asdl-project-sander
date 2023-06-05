@@ -93,7 +93,7 @@ if __name__ == "__main__":
     data_list_test = data_list[int(0.7*len(data_list)):]
     print(f'Total Number of Graphs: {len(data_list)}, Number of Graphs for Training: {len(data_list_train)}, Number of Graphs for Tests: {len(data_list_test)}')
 
-    train_epoch = 20
+    train_epoch = 50
     batch_size = 64
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = GNN(1, 128).to(device)
@@ -111,12 +111,14 @@ if __name__ == "__main__":
         losses.append(loss)
         train_acc = test(train_loader, model)
         test_acc = test(test_loader, model)
-        print(f'Epoch: {epoch:03d}, Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}')
+        print(f'Epoch: {epoch:03d}, Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}, Loss: {loss:.4f}')
         #print(f'Epoch: {epoch:03d}, Train Acc: {train_acc:.4f}, Loss: {loss:.4f}')
     
     plt.plot(losses)
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
+    plt.savefig('losses.png')
     plt.show()
+    
 
     
