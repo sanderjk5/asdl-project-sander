@@ -56,7 +56,7 @@ def prepareData(dataset_dir: RichPath):
                 #             vocab_edges.append((node_idx, subtoken_idx))
 
                 #     graph["graph"]["edges"]["HasSubtoken"] = vocab_edges
-                
+
                 x = torch.tensor(nodes, dtype=torch.float)
                 outgoing_edges, incoming_edges, edge_attributes = [], [], []
                 for key in graph["graph"]["edges"].keys():
@@ -75,8 +75,8 @@ def prepareData(dataset_dir: RichPath):
                     y_val = 1
                     num_bug += 1
                 y = torch.tensor([y_val], dtype=torch.long)
-                if y_val == 1 and num_bug > 12605:
-                    continue
+                # if y_val == 1 and num_bug > 12605:
+                #     continue
                 data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
                 datalist.append(data)
         except Exception as e:
@@ -98,6 +98,6 @@ def create_vocabs(dataset_dir: RichPath) -> Tuple[Vocabulary, Vocabulary]:
                     edge_types.add(key)
         except Exception as e:
             print(f"Error loading {pkg_file}: {e} Skipping...")
-    node_vocab = Vocabulary.create_vocabulary(node_labels, max_size=10000)
-    edge_type_vocab = Vocabulary.create_vocabulary(edge_types, max_size=10000)
+    node_vocab = Vocabulary.create_vocabulary(node_labels, max_size=10000, count_threshold=0, add_unk=True)
+    edge_type_vocab = Vocabulary.create_vocabulary(edge_types, max_size=10000, count_threshold=0, add_unk=True)
     return node_vocab, edge_type_vocab
