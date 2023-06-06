@@ -91,13 +91,11 @@ def create_vocabs(dataset_dir: RichPath) -> Tuple[Vocabulary, Vocabulary]:
             for graph in load_msgpack_l_gz(pkg_file):
                 if graph is None:
                     continue
-                nodes = []
                 for node in graph["graph"]["nodes"]:
                     node_labels.add(node)
 
                 for key in graph["graph"]["edges"].keys():
                     edge_types.add(key)
-
         except Exception as e:
             print(f"Error loading {pkg_file}: {e} Skipping...")
     node_vocab = Vocabulary.create_vocabulary(node_labels, max_size=10000)
