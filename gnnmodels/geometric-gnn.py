@@ -80,7 +80,7 @@ def test(data_loader, model):
     for data in data_loader:
         out = model(data.x, data.edge_index, data.batch, data.edge_attr)  
         pred = torch.argmax(out, dim=1)
-        #print(f'out: {F.softmax(out)}, pred: {pred}, y: {data.y}')
+        # print(f'out: {F.softmax(out)}, pred: {pred}, y: {data.y}')
         correct += int((pred == data.y).sum())
     return correct / len(data_loader.dataset)
     
@@ -112,12 +112,12 @@ if __name__ == "__main__":
         train_acc = test(train_loader, model)
         test_acc = test(test_loader, model)
         print(f'Epoch: {epoch:03d}, Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}, Loss: {loss:.4f}')
-        #print(f'Epoch: {epoch:03d}, Train Acc: {train_acc:.4f}, Loss: {loss:.4f}')
+        # print(f'Epoch: {epoch:03d}, Train Acc: {train_acc:.4f}, Loss: {loss:.4f}')
     
     plt.plot(losses)
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
-    plt.savefig('losses.png')
+    plt.savefig('losses-eq.png')
     plt.show()
     
 

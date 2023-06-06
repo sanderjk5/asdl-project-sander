@@ -56,7 +56,7 @@ def prepareData(dataset_dir: RichPath):
                 #             vocab_edges.append((node_idx, subtoken_idx))
 
                 #     graph["graph"]["edges"]["HasSubtoken"] = vocab_edges
-
+  
                 x = torch.tensor(nodes, dtype=torch.float)
                 outgoing_edges, incoming_edges, edge_attributes = [], [], []
                 for key in graph["graph"]["edges"].keys():
@@ -75,6 +75,8 @@ def prepareData(dataset_dir: RichPath):
                     y_val = 1
                     num_bug += 1
                 y = torch.tensor([y_val], dtype=torch.long)
+                # if y_val == 1 and num_bug > 209:
+                #     continue
                 # if y_val == 1 and num_bug > 12605:
                 #     continue
                 data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
