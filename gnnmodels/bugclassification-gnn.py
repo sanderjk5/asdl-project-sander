@@ -87,11 +87,11 @@ def test(data_loader, model):
 if __name__ == "__main__":
     dataset_dir = Path(sys.argv[1])
     
-    data_list = prepareData(dataset_dir)
+    data_list = prepareData(dataset_dir, True)
     random.shuffle(data_list)
     data_list_train = data_list[:int(0.7*len(data_list))]
     data_list_test = data_list[int(0.7*len(data_list)):]
-    print(f'Total Number of Graphs: {len(data_list)}, Number of Graphs for Training: {len(data_list_train)}, Number of Graphs for Tests: {len(data_list_test)}')
+    print(f'Total Number of Graphs: {len(data_list)}, Number of Graphs for Training: {len(data_list_train)}, Number of Graphs for Testing: {len(data_list_test)}')
 
     train_epoch = 50
     batch_size = 64
