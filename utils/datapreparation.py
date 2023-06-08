@@ -42,7 +42,16 @@ def prepareData(dataset_dir: RichPath, prepareForLocalization: bool):
 
                 if prepareForLocalization:
                     y_val = [0] * len(graph["graph"]["nodes"])
-                    y_val[graph["target_fix_action_idx"]] = 1
+                    y_val[graph["graph"]["reference_nodes"][graph["target_fix_action_idx"]]] = 1
+                    # y_val = []
+                    # for i in range(len(graph["graph"]["nodes"])):
+                    #     if i == graph["target_fix_action_idx"]:
+                    #         y_val.append(1)
+                    #     else:
+                    #         y_val.append(0)
+                    # if graph["target_fix_action_idx"] < 5:
+                        # print(graph["target_fix_action_idx"])
+                        # print(y_val)
                 else:
                     if graph["target_fix_action_idx"] is None:
                         y_val = [0]
@@ -62,7 +71,7 @@ def prepareData(dataset_dir: RichPath, prepareForLocalization: bool):
                 datalist.append(data)
         except Exception as e:
             print(f"Error loading {pkg_file}: {e} Skipping...")
-    print(num_no_bug)
+    # print(num_no_bug)
     return datalist
 
 def create_vocabs(dataset_dir: RichPath) -> Tuple[Vocabulary, Vocabulary]:
@@ -79,6 +88,6 @@ def create_vocabs(dataset_dir: RichPath) -> Tuple[Vocabulary, Vocabulary]:
                     edge_types.add(key)
         except Exception as e:
             print(f"Error loading {pkg_file}: {e} Skipping...")
-    node_vocab = Vocabulary.create_vocabulary(node_labels, max_size=10000, count_threshold=0, add_unk=True)
-    edge_type_vocab = Vocabulary.create_vocabulary(edge_types, max_size=10000, count_threshold=0, add_unk=True)
+    node_vocab = Vocabulary.create_vocabulary(node_labels, max_size=len(node_labels)+1, count_threshold=0, add_unk=True)
+    edge_type_vocab = Vocabulary.create_vocabulary(edge_types, max_size=len(edge_types)+1, count_threshold=0, add_unk=True)
     return node_vocab, edge_type_vocab

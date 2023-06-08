@@ -24,29 +24,39 @@ class GNN(torch.nn.Module):
         self.conv1 = GATConv(
             input_size, hidden_channels)
         self.conv2 = GATConv(
+            hidden_channels, hidden_channels)
+        self.conv3 = GATConv(
+            hidden_channels, hidden_channels)
+        self.conv4 = GATConv(
+            hidden_channels, hidden_channels)
+        self.conv5 = GATConv(
+            hidden_channels, hidden_channels)
+        self.conv6 = GATConv(
+            hidden_channels, hidden_channels)
+        self.conv7 = GATConv(
+            hidden_channels, hidden_channels)
+        self.conv8 = GATConv(
             hidden_channels, 2)
-        # self.conv3 = GATConv(
-        #     hidden_channels, hidden_channels)
-        # self.conv4 = GATConv(
-        #     hidden_channels, hidden_channels)
-        # self.conv5 = GATConv(
-        #     hidden_channels, hidden_channels)
-        # self.conv6 = GATConv(
-        #     hidden_channels, hidden_channels)
     
     def forward(self, x, edge_index,  edge_attr):
         x = self.conv1(x, edge_index, edge_attr)
         x = x.relu()
-        x = F.dropout(x, p= 0.2, training=self.training)
         x = self.conv2(x, edge_index, edge_attr)
-        # x = x.relu()
-        # x = self.conv3(x, edge_index, edge_attr)
-        # x = x.relu()
-        # x = self.conv4(x, edge_index, edge_attr)
-        # x = x.relu()
-        # x = self.conv5(x, edge_index, edge_attr)
-        # x = x.relu()
-        # x = self.conv6(x, edge_index, edge_attr)
+        x = x.relu()
+        x = self.conv3(x, edge_index, edge_attr)
+        x = x.relu()
+        x = F.dropout(x, p= 0.2, training=self.training)
+        x = self.conv4(x, edge_index, edge_attr)
+        x = x.relu()
+        x = self.conv5(x, edge_index, edge_attr)
+        x = x.relu()
+        x = self.conv6(x, edge_index, edge_attr)
+        x = x.relu()
+        x = F.dropout(x, p= 0.2, training=self.training)
+        x = x.relu()
+        x = self.conv7(x, edge_index, edge_attr)
+        x = x.relu()
+        x = self.conv8(x, edge_index, edge_attr)
     
         return x
     
@@ -59,6 +69,7 @@ def train(data_loader, model, optimizer, criterion, useScaler):
         optimizer.zero_grad()
         out = model(data.x, data.edge_index, data.edge_attr)
         # print(out)
+        # print(data.y)
         loss = criterion(out, data.y)
         if useScaler:
             scaler.scale(loss).backward()
@@ -75,9 +86,25 @@ def test(data_loader, model):
     correct = 0
     for data in data_loader:
         out = model(data.x, data.edge_index, data.edge_attr)  
-        pred = torch.argmax(out, dim=1)
+        
+        y_index = (data.y == 1).nonzero(as_tuple=True)[0]
+
+        pred_max_index = torch.argmax(out, dim=0)[1]
+        if y_index == pred_max_index:
+            correct += 1
+
+        # pred_max_indices = (out[1] == torch.max(out, dim=0)[0][1]).nonzero(as_tuple=True)
+        # if y_index in pred_max_indices:
+        #     correct += 1
+
+
+        # if pred_index[1] > 0 and pred_index[1] < 15:
+        #     print(f'index: {pred_index}, out: {out}')
+        # print(f'index: {y_index}, y: {data.y}')
+
+        # pred = torch.argmax(out, dim=1)
         # print(f'out: {F.softmax(out)}, pred: {pred}, y: {data.y}')
-        correct += int((pred == data.y).sum())
+        
     return correct / len(data_loader.dataset)
     
 if __name__ == "__main__":
@@ -92,8 +119,8 @@ if __name__ == "__main__":
     train_epoch = 50
     batch_size = 1
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = GNN(1, 64).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.1, weight_decay=5e-4)
+    model = GNN(1, 256).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-4)
     criterion = torch.nn.CrossEntropyLoss()
     train_loader = DataLoader(data_list_train, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(data_list_test, batch_size=batch_size, shuffle=True)
