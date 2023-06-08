@@ -18,24 +18,26 @@ import sys
 
 import matplotlib.pyplot as plt
 
+import numpy as np
+
 class GNN(torch.nn.Module):
     def __init__(self, input_size, hidden_channels):
         super(GNN, self).__init__()
-        self.conv1 = GATConv(
+        self.conv1 = GCNConv(
             input_size, hidden_channels)
-        self.conv2 = GATConv(
+        self.conv2 = GCNConv(
             hidden_channels, hidden_channels)
-        self.conv3 = GATConv(
+        self.conv3 = GCNConv(
             hidden_channels, hidden_channels)
-        self.conv4 = GATConv(
+        self.conv4 = GCNConv(
             hidden_channels, hidden_channels)
-        self.conv5 = GATConv(
-            hidden_channels, hidden_channels)
-        self.conv6 = GATConv(
-            hidden_channels, hidden_channels)
-        self.conv7 = GATConv(
-            hidden_channels, hidden_channels)
-        self.conv8 = GATConv(
+        # self.conv5 = GCNConv(
+        #     hidden_channels, hidden_channels)
+        # self.conv6 = GCNConv(
+        #     hidden_channels, hidden_channels)
+        # self.conv7 = GCNConv(
+        #     hidden_channels, hidden_channels)
+        self.conv8 = GCNConv(
             hidden_channels, 2)
     
     def forward(self, x, edge_index,  edge_attr):
@@ -47,18 +49,18 @@ class GNN(torch.nn.Module):
         x = x.relu()
         x = F.dropout(x, p= 0.2, training=self.training)
         x = self.conv4(x, edge_index, edge_attr)
-        x = x.relu()
-        x = self.conv5(x, edge_index, edge_attr)
-        x = x.relu()
-        x = self.conv6(x, edge_index, edge_attr)
-        x = x.relu()
-        x = F.dropout(x, p= 0.2, training=self.training)
-        x = x.relu()
-        x = self.conv7(x, edge_index, edge_attr)
-        x = x.relu()
+        # x = x.relu()
+        # x = self.conv5(x, edge_index, edge_attr)
+        # x = x.relu()
+        # x = self.conv6(x, edge_index, edge_attr)
+        # x = x.relu()
+        # x = F.dropout(x, p= 0.2, training=self.training)
+        # x = x.relu()
+        # x = self.conv7(x, edge_index, edge_attr)
+        # x = x.relu()
         x = self.conv8(x, edge_index, edge_attr)
-    
-        return x
+
+        return x        
     
 def train(data_loader, model, optimizer, criterion, useScaler): 
     running_loss = 0
@@ -68,9 +70,16 @@ def train(data_loader, model, optimizer, criterion, useScaler):
     for data in data_loader:
         optimizer.zero_grad()
         out = model(data.x, data.edge_index, data.edge_attr)
-        # print(out)
-        # print(data.y)
-        loss = criterion(out, data.y)
+        # print(out.size())
+        # print(data.y.size())
+        # print(out[data.mask])
+        # # print(F.softmax(out, dim=1))
+        # print(data.mask)
+        reference_indices = (data.mask == 1).nonzero(as_tuple=True)[0]
+        reference_out = torch.index_select(out, 0, reference_indices)
+        reference_y = torch.index_select(data.y, 0, reference_indices)
+        loss = criterion(reference_out, reference_y)
+        # loss = criterion(out, data.y)
         if useScaler:
             scaler.scale(loss).backward()
             scaler.step(optimizer)
@@ -87,11 +96,21 @@ def test(data_loader, model):
     for data in data_loader:
         out = model(data.x, data.edge_index, data.edge_attr)  
         
-        y_index = (data.y == 1).nonzero(as_tuple=True)[0]
+        # y_index = (data.y == 1).nonzero(as_tuple=True)[0]
+        # pred_max_index = torch.argmax(out, dim=0)[1]
 
-        pred_max_index = torch.argmax(out, dim=0)[1]
+        reference_indices = (data.mask == 1).nonzero(as_tuple=True)[0]
+        reference_y = torch.index_select(data.y, 0, reference_indices)
+        y_index = (reference_y == 1).nonzero(as_tuple=True)[0]
+        reference_out = torch.index_select(out, 0, reference_indices)
+        pred_max_index = torch.argmax(reference_out, dim=0)[1]
+        
         if y_index == pred_max_index:
             correct += 1
+
+        # print(reference_out)
+        # print(F.softmax(reference_out))
+        # print(y_index)
 
         # pred_max_indices = (out[1] == torch.max(out, dim=0)[0][1]).nonzero(as_tuple=True)
         # if y_index in pred_max_indices:
@@ -112,16 +131,18 @@ if __name__ == "__main__":
     
     data_list = prepareData(dataset_dir, True)
     random.shuffle(data_list)
-    data_list_train = data_list[:int(0.7*len(data_list))]
-    data_list_test = data_list[int(0.7*len(data_list)):]
+    data_list_train = data_list[:int(0.8*len(data_list))]
+    data_list_test = data_list[int(0.8*len(data_list)):]
     print(f'Total Number of Graphs: {len(data_list)}, Number of Graphs for Training: {len(data_list_train)}, Number of Graphs for Testing: {len(data_list_test)}')
 
     train_epoch = 50
     batch_size = 1
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = GNN(1, 256).to(device)
+    model = GNN(1, 128).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-4)
     criterion = torch.nn.CrossEntropyLoss()
+    # criterion = torch.nn.CrossEntropyLoss(weight=torch.tensor([0.001, 0.999], dtype=torch.float32))
+    # criterion = torch.nn.BCEWithLogitsLoss()
     train_loader = DataLoader(data_list_train, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(data_list_test, batch_size=batch_size, shuffle=True)
 

@@ -43,6 +43,11 @@ def prepareData(dataset_dir: RichPath, prepareForLocalization: bool):
                 if prepareForLocalization:
                     y_val = [0] * len(graph["graph"]["nodes"])
                     y_val[graph["graph"]["reference_nodes"][graph["target_fix_action_idx"]]] = 1
+
+                    mask_val = [0] * len(graph["graph"]["nodes"])
+                    for node_id in graph["graph"]["reference_nodes"]:
+                        mask_val[node_id] = 1
+                    mask = torch.tensor(mask_val, dtype=torch.int)
                     # y_val = []
                     # for i in range(len(graph["graph"]["nodes"])):
                     #     if i == graph["target_fix_action_idx"]:
@@ -63,11 +68,10 @@ def prepareData(dataset_dir: RichPath, prepareForLocalization: bool):
                         #     continue
                         y_val = [1]
                         num_bug += 1
-                        y = torch.tensor([y_val], dtype=torch.long)
 
                 y = torch.tensor(y_val, dtype=torch.long)
                 
-                data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
+                data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y, mask=mask)
                 datalist.append(data)
         except Exception as e:
             print(f"Error loading {pkg_file}: {e} Skipping...")
