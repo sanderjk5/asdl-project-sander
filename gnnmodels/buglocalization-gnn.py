@@ -31,8 +31,8 @@ class GNN(torch.nn.Module):
             hidden_channels, hidden_channels)
         self.conv4 = GCNConv(
             hidden_channels, hidden_channels)
-        # self.conv5 = GCNConv(
-        #     hidden_channels, hidden_channels)
+        self.conv5 = GCNConv(
+            hidden_channels, hidden_channels)
         # self.conv6 = GCNConv(
         #     hidden_channels, hidden_channels)
         # self.conv7 = GCNConv(
@@ -45,12 +45,13 @@ class GNN(torch.nn.Module):
         x = x.relu()
         x = self.conv2(x, edge_index, edge_attr)
         x = x.relu()
+        x = F.dropout(x, p= 0.2, training=self.training)
         x = self.conv3(x, edge_index, edge_attr)
         x = x.relu()
-        x = F.dropout(x, p= 0.2, training=self.training)
         x = self.conv4(x, edge_index, edge_attr)
-        # x = x.relu()
-        # x = self.conv5(x, edge_index, edge_attr)
+        x = x.relu()
+        x = F.dropout(x, p= 0.2, training=self.training)
+        x = self.conv5(x, edge_index, edge_attr)
         # x = x.relu()
         # x = self.conv6(x, edge_index, edge_attr)
         # x = x.relu()
