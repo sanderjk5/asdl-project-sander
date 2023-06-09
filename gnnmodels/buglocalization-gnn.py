@@ -52,7 +52,7 @@ class GNN(torch.nn.Module):
         x = x.relu()
         x = F.dropout(x, p= 0.2, training=self.training)
         x = self.conv5(x, edge_index, edge_attr)
-        # x = x.relu()
+        x = x.relu()
         # x = self.conv6(x, edge_index, edge_attr)
         # x = x.relu()
         # x = F.dropout(x, p= 0.2, training=self.training)
@@ -149,21 +149,34 @@ if __name__ == "__main__":
 
     #train_loader = DataLoader(data_list, batch_size=batch_size, shuffle=True)
 
-    losses = []
+    losses, train_accs, test_accs  = [], [], []
 
     for epoch in range (1, train_epoch+1):
         loss = train(train_loader, model, optimizer, criterion, False)
         losses.append(loss)
         train_acc = test(train_loader, model)
+        train_accs.append(train_acc)
         test_acc = test(test_loader, model)
+        test_accs.append(test_acc)
         print(f'Epoch: {epoch:03d}, Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}, Loss: {loss:.4f}')
         # print(f'Epoch: {epoch:03d}, Train Acc: {train_acc:.4f}, Loss: {loss:.4f}')
-    
+
+    plt.figure(0)
     plt.plot(losses)
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
-    plt.savefig('losses-loc.png')
-    plt.show()
+    plt.ylim((0, 0.5))
+    plt.savefig('losses_loc.png')
+    
+    plt.figure(1)
+    plt.plot(train_accs, label='Training')
+    plt.plot(test_accs, label='Testing')
+    plt.legend('lower right')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylim((0, 0.2))
+    plt.savefig('accuracies_loc.png')
+    plt.close()
     
 
     
