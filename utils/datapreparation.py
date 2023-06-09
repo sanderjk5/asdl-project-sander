@@ -6,14 +6,17 @@ from torch_geometric.data import Data
 from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
 import re
 from dpu_utils.mlutils import Vocabulary
+import numpy as np
 
-def prepareData(dataset_dir: RichPath, prepareForLocalization: bool):
+def prepareData(dataset_dir: RichPath, prepareForLocalization: bool) -> Tuple[List, torch.Tensor]:
     assert dataset_dir.exists()
 
     datalist = []
     node_label_vocab, edge_attr_vocab = create_vocabs(dataset_dir)
     num_bug = 0
     num_no_bug = 0
+
+    num_unique_ref_nodes = 0
 
     for pkg_file in dataset_dir.rglob("*.msgpack.l.gz"):
         try:
@@ -44,19 +47,14 @@ def prepareData(dataset_dir: RichPath, prepareForLocalization: bool):
                     y_val = [0] * len(graph["graph"]["nodes"])
                     y_val[graph["graph"]["reference_nodes"][graph["target_fix_action_idx"]]] = 1
 
+                    
+                    unique_reference_nodes = np.unique(graph["graph"]["reference_nodes"])
+                    num_unique_ref_nodes += len(unique_reference_nodes)
+
                     mask_val = [0] * len(graph["graph"]["nodes"])
-                    for node_id in graph["graph"]["reference_nodes"]:
+                    for node_id in unique_reference_nodes:
                         mask_val[node_id] = 1
                     mask = torch.tensor(mask_val, dtype=torch.int)
-                    # y_val = []
-                    # for i in range(len(graph["graph"]["nodes"])):
-                    #     if i == graph["target_fix_action_idx"]:
-                    #         y_val.append(1)
-                    #     else:
-                    #         y_val.append(0)
-                    # if graph["target_fix_action_idx"] < 5:
-                        # print(graph["target_fix_action_idx"])
-                        # print(y_val)
                 else:
                     if graph["target_fix_action_idx"] is None:
                         y_val = [0]
@@ -76,7 +74,9 @@ def prepareData(dataset_dir: RichPath, prepareForLocalization: bool):
         except Exception as e:
             print(f"Error loading {pkg_file}: {e} Skipping...")
     # print(num_no_bug)
-    return datalist
+    weight_buggy_class = 1 - (len(datalist)/num_unique_ref_nodes)
+    weights = torch.tensor([1 - weight_buggy_class, weight_buggy_class], dtype=torch.float)
+    return (datalist, weights)
 
 def create_vocabs(dataset_dir: RichPath) -> Tuple[Vocabulary, Vocabulary]:
     node_labels, edge_types = set(), set()
