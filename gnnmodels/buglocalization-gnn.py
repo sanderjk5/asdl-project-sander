@@ -156,7 +156,7 @@ if __name__ == "__main__":
         test_acc = test(test_loader, model, k)
         test_accs.append(test_acc[0])
         test_accs_topk.append(test_acc[1])
-        print(f'Epoch: {epoch:03d}, Train Acc: {train_acc[0]:.4f}, Test Acc: {test_acc[0]:.4f}, Train Acc Tok k: {train_acc[1]:.4f}, Test Acc: {test_acc[1]:.4f}, Loss: {loss:.4f}')
+        print(f'Epoch: {epoch:03d}, Train Acc: {train_acc[0]:.4f}, Test Acc: {test_acc[0]:.4f}, Train Acc Top k: {train_acc[1]:.4f}, Test Acc Top k: {test_acc[1]:.4f}, Loss: {loss:.4f}')
 
     plt.figure(0)
     plt.plot(losses)
