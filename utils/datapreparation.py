@@ -49,8 +49,6 @@ def prepareData(dataset_dir: RichPath, prepareForLocalization: bool) -> Tuple[Li
 
                     
                     unique_reference_nodes = np.unique(graph["graph"]["reference_nodes"])
-                    if(len(unique_reference_nodes) < 5):
-                        continue
                     num_unique_ref_nodes += len(unique_reference_nodes)
 
                     mask_val = [0] * len(graph["graph"]["nodes"])

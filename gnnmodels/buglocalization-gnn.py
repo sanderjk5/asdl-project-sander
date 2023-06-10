@@ -45,6 +45,7 @@ class GNN(torch.nn.Module):
         x = x.relu()
         x = self.conv2(x, data.edge_index, data.edge_attr)
         x = x.relu()
+        x = F.dropout(x, p= 0.2, training=self.training)
         x = self.conv3(x, data.edge_index, data.edge_attr)
         x = x.relu()
         x = F.dropout(x, p= 0.2, training=self.training)
@@ -52,10 +53,10 @@ class GNN(torch.nn.Module):
         x = x.relu()
         x = self.conv5(x, data.edge_index, data.edge_attr)
         x = x.relu()
+        x = F.dropout(x, p= 0.2, training=self.training)
         x = self.conv6(x, data.edge_index, data.edge_attr)
         x = x.relu()
         x = F.dropout(x, p= 0.2, training=self.training)
-        x = x.relu()
         x = self.conv7(x, data.edge_index, data.edge_attr)
         x = x.relu()
         x = self.conv8(x, data.edge_index, data.edge_attr)
@@ -111,7 +112,11 @@ def test(data_loader, model, k):
         if y_index == pred_max_index:
             correct += 1
 
-        pred_max_indices = torch.topk(reference_out, k, dim=0)[1]
+        num_ref_nodes = reference_out.size()[0]
+        if(num_ref_nodes >= k):
+            pred_max_indices = torch.topk(reference_out, k, dim=0)[1]
+        else:
+            pred_max_indices = torch.topk(reference_out, num_ref_nodes, dim=0)[1]
         pred_max_indices = torch.transpose(pred_max_indices, 0, 1)[1]
         # print(f'reference_out: {reference_out}, pred_max_indices: {pred_max_indices}, pred_max_indices[1]: {pred_max_indices[1]}, y_index: {y_index}, y_index in pred_max_indices: {y_index in pred_max_indices[1]}') 
         if y_index in pred_max_indices:
@@ -128,7 +133,7 @@ if __name__ == "__main__":
     data_list_test = data_list[int(0.7*len(data_list)):]
     print(f'Total Number of Graphs: {len(data_list)}, Number of Graphs for Training: {len(data_list_train)}, Number of Graphs for Testing: {len(data_list_test)}') 
 
-    train_epoch = 25
+    train_epoch = 30
     batch_size = 1
     k = 3
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
