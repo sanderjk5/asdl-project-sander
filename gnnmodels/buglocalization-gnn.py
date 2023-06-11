@@ -76,7 +76,7 @@ def train(data_loader, model, optimizer, criterion, useScaler, criterion_loc):
         reference_y = torch.index_select(data.y, 0, reference_indices)
 
         y_index = (reference_y == 1).nonzero(as_tuple=True)[0].item()
-        pred_max_index = torch.argmax(reference_out, dim=0)[1]
+        pred_max_index = torch.argmax(F.softmax(reference_out, dim=1), dim=0)[1]
         correct_prediction = 0
         if y_index == pred_max_index:
             correct_prediction = 1
@@ -106,7 +106,7 @@ def test(data_loader, model, k):
         reference_indices = (data.mask == 1).nonzero(as_tuple=True)[0]
         reference_y = torch.index_select(data.y, 0, reference_indices)
         y_index = (reference_y == 1).nonzero(as_tuple=True)[0].item()
-        reference_out = torch.index_select(out, 0, reference_indices)
+        reference_out = F.softmax(torch.index_select(out, 0, reference_indices), dim=1)
 
         pred_max_index = torch.argmax(reference_out, dim=0)[1]
         if y_index == pred_max_index:
