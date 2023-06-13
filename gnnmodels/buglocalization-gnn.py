@@ -217,7 +217,7 @@ if __name__ == "__main__":
     data_list_valid = prepareDataWithVocablularies(dataset_dir_valid, node_label_vocab, edge_attr_vocab)
     data_list_test = prepareDataWithVocablularies(dataset_dir_test, node_label_vocab, edge_attr_vocab)
 
-    num_epochs = 10
+    num_epochs = 50
     batch_size = 1
     k_s = [1, 3, 5]
     patience = 15
