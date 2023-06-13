@@ -11,7 +11,7 @@ from torch_geometric.nn import global_mean_pool
 from pathlib import Path
 from docopt import docopt
 
-from utils.datapreparation import prepareData
+from utils.datapreparation import prepareDataForClassification
 
 import random
 import sys
@@ -87,7 +87,7 @@ def test(data_loader, model):
 if __name__ == "__main__":
     dataset_dir = Path(sys.argv[1])
     
-    data_list = prepareData(dataset_dir, True)
+    data_list = prepareDataForClassification(dataset_dir, True)
     random.shuffle(data_list)
     data_list_train = data_list[:int(0.7*len(data_list))]
     data_list_test = data_list[int(0.7*len(data_list)):]

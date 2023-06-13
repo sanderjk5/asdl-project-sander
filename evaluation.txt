@@ -1,0 +1,10 @@
+Evaluation results:Accuracies of the localization task:Top 1: 0.1196, Top 3: 0.3696, Top 5: 0.4946
+ Training parameters:#Layers: 8, #Hidden channels: 128, Learning rate: 0.0001, #Training graphs: 536
+ 
+ Evaluation results:
+Accuracies of the localization task: Top 1: 0.1141, Top 3: 0.3641, Top 5: 0.6087
+Training parameters: #Layers: 8, #Hidden channels: 128, Learning rate: 0.0001, #Training graphs: 536
+ 
+Evaluation results:
+Accuracies of the localization task: Top 1: 0.1413, Top 3: 0.4239, Top 5: 0.5598
+Training parameters: #Layers: 8, #Hidden channels: 128, Learning rate: 0.0001, #Training graphs: 536, Use Scaler: True

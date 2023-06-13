@@ -11,9 +11,9 @@ from torch_geometric.nn import global_mean_pool
 from pathlib import Path
 from docopt import docopt
 
-from utils.datapreparation import prepareData
+from utils.datapreparation import prepareDataWithoutVocabularies, prepareDataWithVocablularies
 
-import random
+import os
 import sys
 
 import matplotlib.pyplot as plt
@@ -59,9 +59,9 @@ class GNN(torch.nn.Module):
         x = x.relu()
         x = self.conv8(x, data.edge_index, data.edge_attr)
 
-        return x        
+        return x     
     
-def train(data_loader, model, optimizer, criterion, useScaler, criterion_loc): 
+def train(data_loader, model, optimizer, criterion, criterion_loc, useScaler): 
     running_loss = 0
     model.train()
     if useScaler:
@@ -81,7 +81,6 @@ def train(data_loader, model, optimizer, criterion, useScaler, criterion_loc):
 
         loss_norm = criterion(reference_out, reference_y)
         loss_loc = criterion_loc(torch.tensor([correct_prediction], dtype=torch.float), torch.tensor([1], dtype=torch.float))/100
-        #print(f'loss norm: {loss_norm}, loss loc: {loss_loc}, pred ind: {pred_max_index}, y_index: {y_index}, correct_prediction: {correct_prediction}') 
         loss = loss_norm + loss_loc
 
         if useScaler:
@@ -113,38 +112,27 @@ def test(data_loader, model, k_s):
             else:
                 pred_max_indices = torch.topk(reference_out, num_ref_nodes, dim=0)[1]
             pred_max_indices = torch.transpose(pred_max_indices, 0, 1)[1]
-            # print(f'reference_out: {reference_out}, pred_max_indices: {pred_max_indices}, pred_max_indices[1]: {pred_max_indices[1]}, y_index: {y_index}, y_index in pred_max_indices: {y_index in pred_max_indices[1]}') 
             if y_index in pred_max_indices:
                 correct_per_k[i] += 1
 
     return [correct/len(data_loader) for correct in correct_per_k]
-    
-if __name__ == "__main__":
-    dataset_dir = Path(sys.argv[1])
-    
-    data_list, weights = prepareData(dataset_dir, True)
-    random.shuffle(data_list)
-    data_list_train = data_list[:int(0.7*len(data_list))]
-    data_list_valid = data_list[int(0.7*len(data_list)):]
-    print(f'Total Number of Graphs: {len(data_list)}, Number of Graphs for Training: {len(data_list_train)}, Number of Graphs for Validation: {len(data_list_valid)}') 
 
-    num_epochs = 50
-    batch_size = 1
-    k_s = [1, 3, 5]
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = GNN(1, 128).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.00005, weight_decay=5e-4)
+def run_training():
+    print('\nTrain...')   
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     criterion = torch.nn.CrossEntropyLoss(weight=weights)
     criterion_loc = torch.nn.BCELoss()
-    train_loader = DataLoader(data_list_train, batch_size=batch_size, shuffle=True)
-    valid_loader = DataLoader(data_list_valid, batch_size=batch_size, shuffle=True)
-
+    
     losses = []
     train_accs, valid_accs = np.empty([len(k_s), num_epochs]), np.empty([len(k_s), num_epochs])
+    num_epochs_not_improved, best_acc = 0, 0
 
     for epoch in range (1, num_epochs+1):
+        if num_epochs_not_improved > patience:
+            print(f'Accuracy has not improved for {num_epochs_not_improved} epochs. Stopping.')
+            break
         result = f'Epoch: {epoch:02d}'
-        loss = train(train_loader, model, optimizer, criterion, False, criterion_loc)
+        loss = train(train_loader, model, optimizer, criterion, criterion_loc, useScaler)
         losses.append(loss)
         train_acc = test(train_loader, model, k_s)
         valid_acc = test(valid_loader, model, k_s)
@@ -156,7 +144,14 @@ if __name__ == "__main__":
         result += f', Loss: {loss:.4f}'
         print(result)
 
-    x_values = [epoch for epoch in range (1, num_epochs+1)]
+        if valid_acc[0] > best_acc:
+            best_acc = valid_acc[0]
+            num_epochs_not_improved = 0
+        else:
+            num_epochs_not_improved += 1
+    
+    print('Generating  plots...')
+    x_values = [epoch for epoch in range (1, len(losses)+1)]
     plt.figure(0)
     plt.plot(x_values, losses)
     plt.ylabel('Loss')
@@ -174,11 +169,70 @@ if __name__ == "__main__":
     for i in range(len(k_s)):
         label_training = 'Train Top ' + str(k_s[i])
         label_valid = 'Valid Top ' + str(k_s[i])
-        plt.plot(x_values, train_accs[i], label=label_training)
-        plt.plot(x_values, valid_accs[i], label=label_valid)
+        plt.plot(x_values, train_accs[i][:len(losses)], label=label_training)
+        plt.plot(x_values, valid_accs[i][:len(losses)], label=label_valid)
     plt.legend(loc='upper left')
     plt.ylabel('Accuracy')
     plt.xlabel('Epoch')
-    plt.ylim((0, max(max(train_accs[len(k_s)-1]), max(valid_accs[len(k_s)-1]))+0.05))
+    plt.ylim((0, max(max(train_accs[-1]), max(valid_accs[-1]))+0.05))
     plt.savefig('accuracies_loc.png')
     plt.close()
+
+def run_evaluation():
+    print('\nEvaluate...') 
+    test_acc = test(test_loader, model, k_s)
+
+    eval_file_name = 'evaluation.txt'
+    eval_headline = 'Evaluation results:\n'
+    mode = 'w+'
+    if os.path.isfile(eval_file_name):
+        mode = 'a+'
+        eval_headline = '\n \nEvaluation results:\n'
+    eval_file = open(eval_file_name, mode)
+    eval_file.write(eval_headline)
+
+    accs_headline = 'Accuracies of the localization task: '
+    accs = f'Top {k_s[0]}: {test_acc[0]:.4f}'
+    for i in range(1, len(k_s)):
+        accs += f', Top {k_s[i]}: {test_acc[i]:.4f}'
+
+    eval_file.write(accs_headline)
+    eval_file.write(accs)
+    print(accs_headline)
+    print(accs)
+
+    param_headline = '\nTraining parameters: '
+    params = f'#Layers: {8}, #Hidden channels: {hidden_channels}, Learning rate: {learning_rate}, #Training graphs: {len(data_list_train)}, Use Scaler: {useScaler}'
+    eval_file.write(param_headline)
+    eval_file.write(params)
+    eval_file.close()
+
+    
+if __name__ == "__main__":
+    dataset_dir_train = Path(sys.argv[1])
+    dataset_dir_valid = Path(sys.argv[2])
+    dataset_dir_test = Path(sys.argv[3])
+    
+    data_list_train, weights, node_label_vocab, edge_attr_vocab = prepareDataWithoutVocabularies(dataset_dir_train)
+    data_list_valid = prepareDataWithVocablularies(dataset_dir_valid, node_label_vocab, edge_attr_vocab)
+    data_list_test = prepareDataWithVocablularies(dataset_dir_test, node_label_vocab, edge_attr_vocab)
+
+    num_epochs = 10
+    batch_size = 1
+    k_s = [1, 3, 5]
+    patience = 15
+    hidden_channels = 128
+    learning_rate = 0.0001
+    useScaler = False
+
+    train_loader = DataLoader(data_list_train, batch_size=batch_size, shuffle=True)
+    valid_loader = DataLoader(data_list_valid, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(data_list_test, batch_size=batch_size, shuffle=True)
+
+    print(f'Total Number of Graphs: {len(data_list_train)+len(data_list_valid)}, Number of Graphs for Training: {len(data_list_train)}, Number of Graphs for Validation: {len(data_list_valid)}') 
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = GNN(1, hidden_channels).to(device)
+
+    run_training()
+    run_evaluation()
