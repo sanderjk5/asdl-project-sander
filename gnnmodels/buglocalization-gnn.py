@@ -174,7 +174,7 @@ def run_training():
     plt.legend(loc='upper left')
     plt.ylabel('Accuracy')
     plt.xlabel('Epoch')
-    plt.ylim((0, max(max(train_accs[-1]), max(valid_accs[-1]))+0.05))
+    plt.ylim((0, min(max(max(train_accs[-1]), max(valid_accs[-1]))+0.05, 1)))
     plt.savefig('accuracies_loc.png')
     plt.close()
 
@@ -220,7 +220,7 @@ if __name__ == "__main__":
     num_epochs = 50
     batch_size = 1
     k_s = [1, 3, 5]
-    patience = 15
+    patience = 20
     hidden_channels = 128
     learning_rate = 0.0001
     useScaler = False
@@ -229,7 +229,7 @@ if __name__ == "__main__":
     valid_loader = DataLoader(data_list_valid, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(data_list_test, batch_size=batch_size, shuffle=True)
 
-    print(f'Total Number of Graphs: {len(data_list_train)+len(data_list_valid)}, Number of Graphs for Training: {len(data_list_train)}, Number of Graphs for Validation: {len(data_list_valid)}') 
+    print(f'# of Graphs: {len(data_list_train)+len(data_list_valid)+len(data_list_test)}, # Graphs for Training: {len(data_list_train)}, # Graphs for Validation: {len(data_list_valid)}, # Graphs for Evaluation: {len(data_list_test)}') 
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = GNN(1, hidden_channels).to(device)
