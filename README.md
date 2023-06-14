@@ -15,6 +15,6 @@ The input folders must contain files with graphs in the format defined by Buglab
 ## Supervised Model for bug classification
 The file '/gnn-model/bugclassification-gnn.py' contains the implementation of a gnn model to classify python functions as buggy or not. It can be trained and evaluated with the following command:
 
-    $ python -m gnn-model.geometric-gnn folder_path
+    $ python -m gnn-model.geometric-gnn folder_data
 
 The input folder must contain files with graphs in the format defined by Buglab. But with the hardware I used, it was not possible to train the model such that it learns to differentiate between buggy and correct methods.
