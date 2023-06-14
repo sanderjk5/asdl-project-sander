@@ -8,7 +8,7 @@ The folder '/data' contains already generated datasets that can be used for trai
 ## Supervised Model for bug localization
 The file '/gnn-model/buglocalization-gnn.py' contains the implementation of a gnn model to localize the bug in a buggy python function. It can be trained and evaluated with the following command:
 
-    $ python -m gnn-model.geometric-gnn path_training_data path_validation_data path_testing_data
+    $ python -m gnn-model.geometric-gnn folder_training_data folder_validation_data folder_testing_data
 
 The input folders must contain files with graphs in the format defined by Buglab. The results will be stored in the textfile 'evaluation.txt'.
 
