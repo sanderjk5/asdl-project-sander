@@ -1,4 +1,4 @@
-# Asdl Project Jurek Sander
+# ASDL Project Jurek Sander
 Project for the lecture Analyzing Software using Deep Learning.
 
 ## Creating the random bug dataset
