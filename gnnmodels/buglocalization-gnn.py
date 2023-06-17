@@ -19,6 +19,7 @@ import sys
 import matplotlib.pyplot as plt
 
 import numpy as np
+from collections import defaultdict
 
 class GNN(torch.nn.Module):
     def __init__(self, input_size, hidden_channels):
@@ -96,6 +97,7 @@ def train(data_loader, model, optimizer, criterion, criterion_loc, useScaler):
 def test(data_loader, model, k_s):
     model.eval()
     correct_per_k = [0] * len(k_s)
+    localization_per_bugtype = defaultdict(lambda: np.array([0, 0], dtype=np.int32))
     for data in data_loader:
         out = model(data)  
 
@@ -114,8 +116,14 @@ def test(data_loader, model, k_s):
             pred_max_indices = torch.transpose(pred_max_indices, 0, 1)[1]
             if y_index in pred_max_indices:
                 correct_per_k[i] += 1
+        
+        pred_max_index = torch.argmax(reference_out, dim=0)[1]
+        if y_index == pred_max_index:
+            localization_per_bugtype[data.bugtype[0]] += [1, 1]
+        else:
+            localization_per_bugtype[data.bugtype[0]] += [0, 1]
 
-    return [correct/len(data_loader) for correct in correct_per_k]
+    return ([correct/len(data_loader) for correct in correct_per_k], localization_per_bugtype)
 
 def run_training():
     print('\nTrain...')   
@@ -134,8 +142,8 @@ def run_training():
         result = f'Epoch: {epoch:02d}'
         loss = train(train_loader, model, optimizer, criterion, criterion_loc, useScaler)
         losses.append(loss)
-        train_acc = test(train_loader, model, k_s)
-        valid_acc = test(valid_loader, model, k_s)
+        train_acc, _ = test(train_loader, model, k_s)
+        valid_acc, localization_per_bugtype = test(valid_loader, model, k_s)
         for i in range(len(k_s)):
             train_accs[i][epoch-1] = train_acc[i]
             valid_accs[i][epoch-1] = valid_acc[i]
@@ -149,6 +157,10 @@ def run_training():
             num_epochs_not_improved = 0
         else:
             num_epochs_not_improved += 1
+
+        for bugtype, (num_correct, total) in sorted(localization_per_bugtype.items(), key=lambda item: item[0]):
+            acc = f'{bugtype}: {num_correct/total:.4f}  ({num_correct}/{total})'
+            print(acc)
     
     print('Generating  plots...')
     x_values = [epoch for epoch in range (1, len(losses)+1)]
@@ -180,7 +192,7 @@ def run_training():
 
 def run_evaluation():
     print('\nEvaluate...') 
-    test_acc = test(test_loader, model, k_s)
+    test_acc, localization_per_bugtype = test(test_loader, model, k_s)
 
     eval_file_name = 'evaluation.txt'
     eval_headline = 'Evaluation results:\n'
@@ -201,6 +213,14 @@ def run_evaluation():
     print(accs_headline)
     print(accs)
 
+    accs_headline = '\nAccuracies of the localization task per bug type: '
+    print(accs_headline)
+    eval_file.write(accs_headline)
+    for bugtype, (num_correct, total) in sorted(localization_per_bugtype.items(), key=lambda item: item[0]):
+        acc = f'{bugtype}: {num_correct/total:.4f}  ({num_correct}/{total})'
+        print(acc)
+        eval_file.write('\n' + acc)
+
     param_headline = '\nTraining parameters: '
     params = f'#Layers: {8}, #Hidden channels: {hidden_channels}, Learning rate: {learning_rate}, #Training graphs: {len(data_list_train)}, Use Scaler: {useScaler}'
     eval_file.write(param_headline)
@@ -213,9 +233,9 @@ if __name__ == "__main__":
     dataset_dir_valid = Path(sys.argv[2])
     dataset_dir_test = Path(sys.argv[3])
     
-    data_list_train, weights, node_label_vocab, edge_attr_vocab = prepareDataWithoutVocabularies(dataset_dir_train)
-    data_list_valid = prepareDataWithVocablularies(dataset_dir_valid, node_label_vocab, edge_attr_vocab)
-    data_list_test = prepareDataWithVocablularies(dataset_dir_test, node_label_vocab, edge_attr_vocab)
+    data_list_train, weights, node_label_vocab, edge_attr_vocab, num_nodes_train, num_reference_nodes_train = prepareDataWithoutVocabularies(dataset_dir_train)
+    data_list_valid, num_nodes_valid, num_reference_nodes_valid = prepareDataWithVocablularies(dataset_dir_valid, node_label_vocab, edge_attr_vocab)
+    data_list_test, num_nodes_test, num_reference_nodes_test = prepareDataWithVocablularies(dataset_dir_test, node_label_vocab, edge_attr_vocab)
 
     num_epochs = 50
     batch_size = 1
@@ -226,11 +246,16 @@ if __name__ == "__main__":
     useScaler = False
 
     train_loader = DataLoader(data_list_train, batch_size=batch_size, shuffle=True)
-    valid_loader = DataLoader(data_list_valid, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(data_list_test, batch_size=batch_size, shuffle=True)
+    valid_loader = DataLoader(data_list_valid, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(data_list_test, batch_size=batch_size, shuffle=False)
 
     print(f'# of Graphs: {len(data_list_train)+len(data_list_valid)+len(data_list_test)}, # Graphs for Training: {len(data_list_train)}, # Graphs for Validation: {len(data_list_valid)}, # Graphs for Evaluation: {len(data_list_test)}') 
-
+    print(f"# Nodes per training graph: Avg: {np.mean(num_nodes_train)} Median: {np.median(num_nodes_train)} Max: {np.max(num_nodes_train)} Min: {np.min(num_nodes_train)}")
+    print(f"# Reference nodes per training graph: Avg: {np.mean(num_reference_nodes_train)} Median: {np.median(num_reference_nodes_train)} Max: {np.max(num_reference_nodes_train)} Min: {np.min(num_reference_nodes_train)}")
+    print(f"# Nodes per validation graph: Avg: {np.mean(num_nodes_valid)} Median: {np.median(num_nodes_valid)} Max: {np.max(num_nodes_valid)} Min: {np.min(num_nodes_valid)}")
+    print(f"# Reference nodes per validation graph: Avg: {np.mean(num_reference_nodes_valid)} Median: {np.median(num_reference_nodes_valid)} Max: {np.max(num_reference_nodes_valid)} Min: {np.min(num_reference_nodes_valid)}")
+    print(f"# Nodes per evaluation graph: Avg: {np.mean(num_nodes_test)} Median: {np.median(num_nodes_test)} Max: {np.max(num_nodes_test)} Min: {np.min(num_nodes_test)}")
+    print(f"# Reference nodes per evaluation graph: Avg: {np.mean(num_reference_nodes_test)} Median: {np.median(num_reference_nodes_test)} Max: {np.max(num_reference_nodes_test)} Min: {np.min(num_reference_nodes_test)}")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = GNN(1, hidden_channels).to(device)
 

@@ -8,19 +8,21 @@ import re
 from dpu_utils.mlutils import Vocabulary
 import numpy as np
 
-def prepareDataWithoutVocabularies(dataset_dir: RichPath) -> Tuple[List, torch.Tensor, Vocabulary, Vocabulary]:
+def prepareDataWithoutVocabularies(dataset_dir: RichPath) -> Tuple[List, torch.Tensor, Vocabulary, Vocabulary, List, List]:
     assert dataset_dir.exists()
     node_label_vocab, edge_attr_vocab = create_vocabs(dataset_dir)
-    data_list, weights = prepareData(dataset_dir, node_label_vocab, edge_attr_vocab)
-    return (data_list, weights, node_label_vocab, edge_attr_vocab)
+    data_list, weights, num_nodes, num_reference_nodes = prepareData(dataset_dir, node_label_vocab, edge_attr_vocab)
+    return (data_list, weights, node_label_vocab, edge_attr_vocab, num_nodes, num_reference_nodes)
 
-def prepareDataWithVocablularies(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_vocab: Vocabulary) -> List:
+def prepareDataWithVocablularies(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_vocab: Vocabulary) -> Tuple[List, List, List]:
     assert dataset_dir.exists()
-    return prepareData(dataset_dir, node_label_vocab, edge_attr_vocab)[0]
+    data_list, _, num_nodes, num_reference_nodes = prepareData(dataset_dir, node_label_vocab, edge_attr_vocab)
+    return (data_list, num_nodes, num_reference_nodes)
 
-def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_vocab: Vocabulary) -> Tuple[List, torch.Tensor]:
-    datalist = []
+def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_vocab: Vocabulary) -> Tuple[List, torch.Tensor, List, List]:
+    datalist, num_nodes, num_reference_nodes = [], [], []
     num_unique_ref_nodes = 0
+
 
     for pkg_file in dataset_dir.rglob("*.msgpack.l.gz"):
         try:
@@ -33,7 +35,7 @@ def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_v
                 nodes = []
                 for node in graph["graph"]["nodes"]:
                     nodes.append([node_label_vocab.get_id_or_unk(node)])
-
+                num_nodes.append(len(graph["graph"]["nodes"]))
                 x = torch.tensor(nodes, dtype=torch.float)
 
                 outgoing_edges, incoming_edges, edge_attributes = [], [], []
@@ -52,6 +54,7 @@ def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_v
 
                 unique_reference_nodes = np.unique(graph["graph"]["reference_nodes"])
                 num_unique_ref_nodes += len(unique_reference_nodes)
+                num_reference_nodes.append(len(unique_reference_nodes))
 
                 mask_val = [0] * len(graph["graph"]["nodes"])
                 for node_id in unique_reference_nodes:
@@ -59,15 +62,16 @@ def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_v
                 mask = torch.tensor(mask_val, dtype=torch.int)
 
                 y = torch.tensor(y_val, dtype=torch.long)
-                
-                data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y, mask=mask)
+                bugtype = graph["candidate_rewrite_metadata"][graph["target_fix_action_idx"]][0]
+
+                data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y, mask=mask, bugtype=bugtype)
                 datalist.append(data)
         except Exception as e:
             print(f"Error loading {pkg_file}: {e} Skipping...")
 
     weight_buggy_class = 1 - (len(datalist)/num_unique_ref_nodes)
     weights = torch.tensor([1 - weight_buggy_class, weight_buggy_class], dtype=torch.float)
-    return (datalist, weights)
+    return (datalist, weights, num_nodes, num_reference_nodes)
 
 def create_vocabs(dataset_dir: RichPath) -> Tuple[Vocabulary, Vocabulary]:
     node_labels, edge_types = set(), set()
