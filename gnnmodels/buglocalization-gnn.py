@@ -223,7 +223,7 @@ def run_evaluation():
 
     param_headline = '\nTraining parameters: '
     params = f'#Layers: {8}, #Hidden channels: {hidden_channels}, Learning rate: {learning_rate}, #Training graphs: {len(data_list_train)}, Use Scaler: {useScaler}'
-    bugtypes = f'Removed bugtypes: '
+    bugtypes = f'\nRemoved bugtypes: '
     if len(delBugtypes) > 0:
         bugtypes += f'{delBugtypes[0]}'
         for i in range(1, len(delBugtypes)):
@@ -232,6 +232,7 @@ def run_evaluation():
         bugtypes += f'-'
     eval_file.write(param_headline)
     eval_file.write(params)
+    eval_file.write(bugtypes)
     eval_file.close()
 
     
