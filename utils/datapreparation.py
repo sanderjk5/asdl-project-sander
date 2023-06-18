@@ -8,18 +8,18 @@ import re
 from dpu_utils.mlutils import Vocabulary
 import numpy as np
 
-def prepareDataWithoutVocabularies(dataset_dir: RichPath) -> Tuple[List, torch.Tensor, Vocabulary, Vocabulary, List, List]:
+def prepareDataWithoutVocabularies(dataset_dir: RichPath, delBugtypes: List[str]) -> Tuple[List, torch.Tensor, Vocabulary, Vocabulary, List, List]:
     assert dataset_dir.exists()
     node_label_vocab, edge_attr_vocab = create_vocabs(dataset_dir)
-    data_list, weights, num_nodes, num_reference_nodes = prepareData(dataset_dir, node_label_vocab, edge_attr_vocab)
+    data_list, weights, num_nodes, num_reference_nodes = prepareData(dataset_dir, node_label_vocab, edge_attr_vocab, delBugtypes)
     return (data_list, weights, node_label_vocab, edge_attr_vocab, num_nodes, num_reference_nodes)
 
-def prepareDataWithVocablularies(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_vocab: Vocabulary) -> Tuple[List, List, List]:
+def prepareDataWithVocablularies(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_vocab: Vocabulary, delBugtypes: List[str]) -> Tuple[List, List, List]:
     assert dataset_dir.exists()
-    data_list, _, num_nodes, num_reference_nodes = prepareData(dataset_dir, node_label_vocab, edge_attr_vocab)
+    data_list, _, num_nodes, num_reference_nodes = prepareData(dataset_dir, node_label_vocab, edge_attr_vocab, delBugtypes)
     return (data_list, num_nodes, num_reference_nodes)
 
-def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_vocab: Vocabulary) -> Tuple[List, torch.Tensor, List, List]:
+def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_vocab: Vocabulary, delBugtypes: List[str]) -> Tuple[List, torch.Tensor, List, List]:
     datalist, num_nodes, num_reference_nodes = [], [], []
     num_unique_ref_nodes = 0
 
@@ -30,6 +30,11 @@ def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_v
                 if graph is None:
                     continue
                 if graph["target_fix_action_idx"] is None:
+                    continue
+
+                bugtype = graph["candidate_rewrite_metadata"][graph["target_fix_action_idx"]][0]
+
+                if bugtype in delBugtypes:
                     continue
 
                 nodes = []
@@ -52,7 +57,7 @@ def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_v
                 y_val = [0] * len(graph["graph"]["nodes"])
                 y_val[graph["graph"]["reference_nodes"][graph["target_fix_action_idx"]]] = 1
 
-                unique_reference_nodes = np.unique(graph["graph"]["reference_nodes"])
+                unique_reference_nodes = getRelevantReferenceNodes(graph, delBugtypes)
                 num_unique_ref_nodes += len(unique_reference_nodes)
                 num_reference_nodes.append(len(unique_reference_nodes))
 
@@ -62,7 +67,6 @@ def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_v
                 mask = torch.tensor(mask_val, dtype=torch.int)
 
                 y = torch.tensor(y_val, dtype=torch.long)
-                bugtype = graph["candidate_rewrite_metadata"][graph["target_fix_action_idx"]][0]
 
                 data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y, mask=mask, bugtype=bugtype)
                 datalist.append(data)
@@ -91,6 +95,15 @@ def create_vocabs(dataset_dir: RichPath) -> Tuple[Vocabulary, Vocabulary]:
     edge_type_vocab = Vocabulary.create_vocabulary(edge_types, max_size=len(edge_types)+1, count_threshold=0, add_unk=True)
     return node_vocab, edge_type_vocab
 
+def getRelevantReferenceNodes(graph: any, delBugtypes: str):
+    del_indices = []
+    for i in range(len(graph["candidate_rewrite_metadata"])):
+        if graph["candidate_rewrite_metadata"][i][0] in delBugtypes:
+            del_indices.append(i)
+    reference_nodes = np.delete(graph["graph"]["reference_nodes"], del_indices)
+    reference_nodes = np.unique(reference_nodes)
+    return reference_nodes
+    
 def prepareDataForClassification(dataset_dir: RichPath) -> List:
     assert dataset_dir.exists()
 
@@ -98,8 +111,6 @@ def prepareDataForClassification(dataset_dir: RichPath) -> List:
     node_label_vocab, edge_attr_vocab = create_vocabs(dataset_dir)
     num_bug = 0
     num_no_bug = 0
-
-    num_unique_ref_nodes = 0
 
     for pkg_file in dataset_dir.rglob("*.msgpack.l.gz"):
         try:

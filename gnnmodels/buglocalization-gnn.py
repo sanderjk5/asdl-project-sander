@@ -223,6 +223,13 @@ def run_evaluation():
 
     param_headline = '\nTraining parameters: '
     params = f'#Layers: {8}, #Hidden channels: {hidden_channels}, Learning rate: {learning_rate}, #Training graphs: {len(data_list_train)}, Use Scaler: {useScaler}'
+    bugtypes = f'Removed bugtypes: '
+    if len(delBugtypes) > 0:
+        bugtypes += f'{delBugtypes[0]}'
+        for i in range(1, len(delBugtypes)):
+            bugtypes += f', {delBugtypes[i]}'
+    else:
+        bugtypes += f'-'
     eval_file.write(param_headline)
     eval_file.write(params)
     eval_file.close()
@@ -232,10 +239,12 @@ if __name__ == "__main__":
     dataset_dir_train = Path(sys.argv[1])
     dataset_dir_valid = Path(sys.argv[2])
     dataset_dir_test = Path(sys.argv[3])
+
+    delBugtypes = ['VariableMisuseRewriteScout']
     
-    data_list_train, weights, node_label_vocab, edge_attr_vocab, num_nodes_train, num_reference_nodes_train = prepareDataWithoutVocabularies(dataset_dir_train)
-    data_list_valid, num_nodes_valid, num_reference_nodes_valid = prepareDataWithVocablularies(dataset_dir_valid, node_label_vocab, edge_attr_vocab)
-    data_list_test, num_nodes_test, num_reference_nodes_test = prepareDataWithVocablularies(dataset_dir_test, node_label_vocab, edge_attr_vocab)
+    data_list_train, weights, node_label_vocab, edge_attr_vocab, num_nodes_train, num_reference_nodes_train = prepareDataWithoutVocabularies(dataset_dir_train, delBugtypes)
+    data_list_valid, num_nodes_valid, num_reference_nodes_valid = prepareDataWithVocablularies(dataset_dir_valid, node_label_vocab, edge_attr_vocab, delBugtypes)
+    data_list_test, num_nodes_test, num_reference_nodes_test = prepareDataWithVocablularies(dataset_dir_test, node_label_vocab, edge_attr_vocab, delBugtypes)
 
     num_epochs = 50
     batch_size = 1
@@ -246,8 +255,8 @@ if __name__ == "__main__":
     useScaler = False
 
     train_loader = DataLoader(data_list_train, batch_size=batch_size, shuffle=True)
-    valid_loader = DataLoader(data_list_valid, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(data_list_test, batch_size=batch_size, shuffle=False)
+    valid_loader = DataLoader(data_list_valid, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(data_list_test, batch_size=batch_size, shuffle=True)
 
     print(f'# of Graphs: {len(data_list_train)+len(data_list_valid)+len(data_list_test)}, # Graphs for Training: {len(data_list_train)}, # Graphs for Validation: {len(data_list_valid)}, # Graphs for Evaluation: {len(data_list_test)}') 
     print(f"# Nodes per training graph: Avg: {np.mean(num_nodes_train)} Median: {np.median(num_nodes_train)} Max: {np.max(num_nodes_train)} Min: {np.min(num_nodes_train)}")
