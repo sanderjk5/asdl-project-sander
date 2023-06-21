@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 from collections import defaultdict
+import random
 
 class GNN(torch.nn.Module):
     def __init__(self, input_size, hidden_channels):
@@ -98,6 +99,7 @@ def test(data_loader, model, k_s):
     model.eval()
     correct_per_k = [0] * len(k_s)
     localization_per_bugtype = defaultdict(lambda: np.array([0, 0], dtype=np.int32))
+    localization_per_refnodes_number = defaultdict(lambda: np.array([0, 0], dtype=np.int32))
     for data in data_loader:
         out = model(data)  
 
@@ -120,10 +122,42 @@ def test(data_loader, model, k_s):
         pred_max_index = torch.argmax(reference_out, dim=0)[1]
         if y_index == pred_max_index:
             localization_per_bugtype[data.bugtype[0]] += [1, 1]
+            localization_per_refnodes_number[num_ref_nodes] += [1, 1]
         else:
             localization_per_bugtype[data.bugtype[0]] += [0, 1]
+            localization_per_refnodes_number[num_ref_nodes] += [0, 1]
 
-    return ([correct/len(data_loader) for correct in correct_per_k], localization_per_bugtype)
+    return ([correct/len(data_loader) for correct in correct_per_k], localization_per_bugtype, localization_per_refnodes_number)
+
+def baseline(data_loader, k_s):
+    correct_per_k = [0] * len(k_s)
+    localization_per_bugtype = defaultdict(lambda: np.array([0, 0], dtype=np.int32))
+    localization_per_refnodes_number = defaultdict(lambda: np.array([0, 0], dtype=np.int32))
+    for data in data_loader:
+        reference_indices = (data.mask == 1).nonzero(as_tuple=True)[0]
+        num_ref_nodes = len(reference_indices)
+        reference_y = torch.index_select(data.y, 0, reference_indices)
+        y_index = (reference_y == 1).nonzero(as_tuple=True)[0].item()
+        random_reference_out = torch.tensor([random.random() for i in range(0, num_ref_nodes)], dtype=torch.float)
+
+        for i in range(len(k_s)):   
+            k = k_s[i]     
+            if(num_ref_nodes >= k):
+                pred_max_indices = torch.topk(random_reference_out, k, dim=0)[1]
+            else:
+                pred_max_indices = torch.topk(random_reference_out, num_ref_nodes, dim=0)[1]
+            if y_index in pred_max_indices:
+                correct_per_k[i] += 1
+        
+        pred_max_index = torch.argmax(random_reference_out, dim=0)
+        if y_index == pred_max_index:
+            localization_per_bugtype[data.bugtype[0]] += [1, 1]
+            localization_per_refnodes_number[num_ref_nodes] += [1, 1]
+        else:
+            localization_per_bugtype[data.bugtype[0]] += [0, 1]
+            localization_per_refnodes_number[num_ref_nodes] += [0, 1]
+
+    return ([correct/len(data_loader) for correct in correct_per_k], localization_per_bugtype, localization_per_refnodes_number)
 
 def run_training():
     print('\nTrain...')   
@@ -142,8 +176,8 @@ def run_training():
         result = f'Epoch: {epoch:02d}'
         loss = train(train_loader, model, optimizer, criterion, criterion_loc, useScaler)
         losses.append(loss)
-        train_acc, _ = test(train_loader, model, k_s)
-        valid_acc, localization_per_bugtype = test(valid_loader, model, k_s)
+        train_acc, _, _ = test(train_loader, model, k_s)
+        valid_acc, localization_per_bugtype, localization_per_refnodes_number = test(valid_loader, model, k_s)
         for i in range(len(k_s)):
             train_accs[i][epoch-1] = train_acc[i]
             valid_accs[i][epoch-1] = valid_acc[i]
@@ -161,8 +195,11 @@ def run_training():
         for bugtype, (num_correct, total) in sorted(localization_per_bugtype.items(), key=lambda item: item[0]):
             acc = f'{bugtype}: {num_correct/total:.4f}  ({num_correct}/{total})'
             print(acc)
+        for refnodes_number, (num_correct, total) in sorted(localization_per_refnodes_number.items(), key=lambda item: item[0]):
+            acc = f'{refnodes_number}: {num_correct/total:.4f}  ({num_correct}/{total})'
+            print(acc)
     
-    print('Generating  plots...')
+    print('\nGenerating  plots...')
     x_values = [epoch for epoch in range (1, len(losses)+1)]
     plt.figure(0)
     plt.plot(x_values, losses)
@@ -192,8 +229,8 @@ def run_training():
 
 def run_evaluation():
     print('\nEvaluate...') 
-    test_acc, localization_per_bugtype = test(test_loader, model, k_s)
-
+    test_acc, test_localization_per_bugtype, test_localization_per_refnodes_number = test(test_loader, model, k_s)
+    baseline_acc, baseline_localization_per_bugtype, baseline_localization_per_refnodes_number = baseline(test_loader, k_s)
     eval_file_name = 'evaluation.txt'
     eval_headline = 'Evaluation results:\n'
     mode = 'w+'
@@ -203,7 +240,7 @@ def run_evaluation():
     eval_file = open(eval_file_name, mode)
     eval_file.write(eval_headline)
 
-    accs_headline = 'Accuracies of the localization task: '
+    accs_headline = '(gnn) Accuracies of the localization task: '
     accs = f'Top {k_s[0]}: {test_acc[0]:.4f}'
     for i in range(1, len(k_s)):
         accs += f', Top {k_s[i]}: {test_acc[i]:.4f}'
@@ -213,13 +250,47 @@ def run_evaluation():
     print(accs_headline)
     print(accs)
 
-    accs_headline = '\nAccuracies of the localization task per bug type: '
+    accs_headline = '\n(gnn) Accuracies of the localization task per bug type: '
     print(accs_headline)
     eval_file.write(accs_headline)
-    for bugtype, (num_correct, total) in sorted(localization_per_bugtype.items(), key=lambda item: item[0]):
+    for bugtype, (num_correct, total) in sorted(test_localization_per_bugtype.items(), key=lambda item: item[0]):
         acc = f'{bugtype}: {num_correct/total:.4f}  ({num_correct}/{total})'
         print(acc)
         eval_file.write('\n' + acc)
+
+    accs_headline = '\n(gnn) Accuracies of the localization task per number of reference nodes: '
+    print(accs_headline)
+    eval_file.write(accs_headline)
+    for refnodes_number, (num_correct, total) in sorted(test_localization_per_refnodes_number.items(), key=lambda item: item[0]):
+            acc = f'{refnodes_number}: {num_correct/total:.4f}  ({num_correct}/{total})'
+            print(acc)
+            eval_file.write('\n' + acc)
+
+    accs_headline = '(baseline) Accuracies of the localization task: '
+    accs = f'Top {k_s[0]}: {baseline_acc[0]:.4f}'
+    for i in range(1, len(k_s)):
+        accs += f', Top {k_s[i]}: {baseline_acc[i]:.4f}'
+
+    eval_file.write(accs_headline)
+    eval_file.write(accs)
+    print(accs_headline)
+    print(accs)
+
+    accs_headline = '\n(baseline) Accuracies of the localization task per bug type: '
+    print(accs_headline)
+    eval_file.write(accs_headline)
+    for bugtype, (num_correct, total) in sorted(baseline_localization_per_bugtype.items(), key=lambda item: item[0]):
+        acc = f'{bugtype}: {num_correct/total:.4f}  ({num_correct}/{total})'
+        print(acc)
+        eval_file.write('\n' + acc)
+
+    accs_headline = '\n(baseline) Accuracies of the localization task per number of reference nodes: '
+    print(accs_headline)
+    eval_file.write(accs_headline)
+    for refnodes_number, (num_correct, total) in sorted(baseline_localization_per_refnodes_number.items(), key=lambda item: item[0]):
+            acc = f'{refnodes_number}: {num_correct/total:.4f}  ({num_correct}/{total})'
+            print(acc)
+            eval_file.write('\n' + acc)
 
     param_headline = '\nTraining parameters: '
     params = f'#Layers: {8}, #Hidden channels: {hidden_channels}, Learning rate: {learning_rate}, #Training graphs: {len(data_list_train)}, Use Scaler: {useScaler}'
@@ -234,14 +305,14 @@ def run_evaluation():
     eval_file.write(params)
     eval_file.write(bugtypes)
     eval_file.close()
-
     
 if __name__ == "__main__":
     dataset_dir_train = Path(sys.argv[1])
     dataset_dir_valid = Path(sys.argv[2])
     dataset_dir_test = Path(sys.argv[3])
 
-    delBugtypes = ['VariableMisuseRewriteScout']
+    delBugtypes = []
+    # delBugtypes = ['VariableMisuseRewriteScout']
     
     data_list_train, weights, node_label_vocab, edge_attr_vocab, num_nodes_train, num_reference_nodes_train = prepareDataWithoutVocabularies(dataset_dir_train, delBugtypes)
     data_list_valid, num_nodes_valid, num_reference_nodes_valid = prepareDataWithVocablularies(dataset_dir_valid, node_label_vocab, edge_attr_vocab, delBugtypes)

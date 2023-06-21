@@ -37,6 +37,10 @@ def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_v
                 if bugtype in delBugtypes:
                     continue
 
+                unique_reference_nodes = getRelevantReferenceNodes(graph, delBugtypes)
+                # if len(unique_reference_nodes) > 20:
+                #     continue
+
                 nodes = []
                 for node in graph["graph"]["nodes"]:
                     nodes.append([node_label_vocab.get_id_or_unk(node)])
@@ -57,7 +61,6 @@ def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_v
                 y_val = [0] * len(graph["graph"]["nodes"])
                 y_val[graph["graph"]["reference_nodes"][graph["target_fix_action_idx"]]] = 1
 
-                unique_reference_nodes = getRelevantReferenceNodes(graph, delBugtypes)
                 num_unique_ref_nodes += len(unique_reference_nodes)
                 num_reference_nodes.append(len(unique_reference_nodes))
 
