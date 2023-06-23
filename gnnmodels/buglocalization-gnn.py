@@ -83,7 +83,7 @@ def train(data_loader, model, optimizer, criterion, criterion_loc, useScaler):
 
         loss_norm = criterion(reference_out, reference_y)
         loss_loc = criterion_loc(torch.tensor([correct_prediction], dtype=torch.float), torch.tensor([1], dtype=torch.float))/100
-        loss = loss_norm + loss_loc
+        loss = loss_norm #+ loss_loc
 
         if useScaler:
             scaler.scale(loss).backward()
@@ -313,6 +313,7 @@ if __name__ == "__main__":
 
     delBugtypes = []
     # delBugtypes = ['VariableMisuseRewriteScout']
+    delBugtypes = ['VariableMisuseRewriteScout', 'ArgSwapRewriteScout', 'LiteralRewriteScout', 'BooleanOperatorRewriteScout']
     
     data_list_train, weights, node_label_vocab, edge_attr_vocab, num_nodes_train, num_reference_nodes_train = prepareDataWithoutVocabularies(dataset_dir_train, delBugtypes)
     data_list_valid, num_nodes_valid, num_reference_nodes_valid = prepareDataWithVocablularies(dataset_dir_valid, node_label_vocab, edge_attr_vocab, delBugtypes)
