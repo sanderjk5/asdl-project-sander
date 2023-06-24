@@ -38,8 +38,8 @@ def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_v
                     continue
 
                 unique_reference_nodes = getRelevantReferenceNodes(graph, delBugtypes)
-                if len(unique_reference_nodes) > 20:
-                    continue
+                # if len(unique_reference_nodes) > 20:
+                #     continue
 
                 nodes = []
                 for node in graph["graph"]["nodes"]:

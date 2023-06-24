@@ -266,7 +266,7 @@ def run_evaluation():
             print(acc)
             eval_file.write('\n' + acc)
 
-    accs_headline = '(baseline) Accuracies of the localization task: '
+    accs_headline = '\n(baseline) Accuracies of the localization task: '
     accs = f'Top {k_s[0]}: {baseline_acc[0]:.4f}'
     for i in range(1, len(k_s)):
         accs += f', Top {k_s[i]}: {baseline_acc[i]:.4f}'
