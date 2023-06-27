@@ -1,23 +1,12 @@
 import torch
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
-from torch_geometric.nn import GATConv
-from torch_geometric.nn import TransformerConv
 from torch_geometric.loader import DataLoader
-
-from torch.nn import Linear
-from torch_geometric.nn import global_mean_pool
-
 from pathlib import Path
-from docopt import docopt
-
 from utils.datapreparation import prepareDataWithoutVocabularies, prepareDataWithVocablularies
-
 import os
 import sys
-
 import matplotlib.pyplot as plt
-
 import numpy as np
 from collections import defaultdict
 import random

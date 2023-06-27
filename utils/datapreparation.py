@@ -1,10 +1,8 @@
 from utils.msgpackutils import load_msgpack_l_gz
 from dpu_utils.utils import RichPath
-from dpu_utils.codeutils import split_identifier_into_parts
 import torch
 from torch_geometric.data import Data
-from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
-import re
+from typing import List, Tuple
 from dpu_utils.mlutils import Vocabulary
 import numpy as np
 
