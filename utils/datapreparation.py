@@ -23,7 +23,6 @@ def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_v
     datalist, num_nodes, num_reference_nodes = [], [], []
     num_unique_ref_nodes = 0
 
-
     for pkg_file in dataset_dir.rglob("*.msgpack.l.gz"):
         try:
             for graph in load_msgpack_l_gz(pkg_file):
@@ -37,9 +36,9 @@ def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_v
                 if bugtype in delBugtypes:
                     continue
 
-                unique_reference_nodes = getRelevantReferenceNodes(graph, delBugtypes)
-                # if len(unique_reference_nodes) > 20:
-                #     continue
+                unique_reference_nodes = np.unique(graph["graph"]["reference_nodes"])
+                if len(unique_reference_nodes) > 20:
+                    continue
 
                 nodes = []
                 for node in graph["graph"]["nodes"]:
@@ -97,15 +96,6 @@ def create_vocabs(dataset_dir: RichPath) -> Tuple[Vocabulary, Vocabulary]:
     node_vocab = Vocabulary.create_vocabulary(node_labels, max_size=len(node_labels)+1, count_threshold=0, add_unk=True)
     edge_type_vocab = Vocabulary.create_vocabulary(edge_types, max_size=len(edge_types)+1, count_threshold=0, add_unk=True)
     return node_vocab, edge_type_vocab
-
-def getRelevantReferenceNodes(graph: any, delBugtypes: str):
-    del_indices = []
-    for i in range(len(graph["candidate_rewrite_metadata"])):
-        if graph["candidate_rewrite_metadata"][i][0] in delBugtypes:
-            del_indices.append(i)
-    reference_nodes = np.delete(graph["graph"]["reference_nodes"], del_indices)
-    reference_nodes = np.unique(reference_nodes)
-    return reference_nodes
     
 def prepareDataForClassification(dataset_dir: RichPath) -> List:
     assert dataset_dir.exists()

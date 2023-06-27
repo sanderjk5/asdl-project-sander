@@ -192,12 +192,12 @@ def run_training():
         else:
             num_epochs_not_improved += 1
 
-        for bugtype, (num_correct, total) in sorted(localization_per_bugtype.items(), key=lambda item: item[0]):
-            acc = f'{bugtype}: {num_correct/total:.4f}  ({num_correct}/{total})'
-            print(acc)
-        for refnodes_number, (num_correct, total) in sorted(localization_per_refnodes_number.items(), key=lambda item: item[0]):
-            acc = f'{refnodes_number}: {num_correct/total:.4f}  ({num_correct}/{total})'
-            print(acc)
+        # for bugtype, (num_correct, total) in sorted(localization_per_bugtype.items(), key=lambda item: item[0]):
+        #     acc = f'{bugtype}: {num_correct/total:.4f}  ({num_correct}/{total})'
+        #     print(acc)
+        # for refnodes_number, (num_correct, total) in sorted(localization_per_refnodes_number.items(), key=lambda item: item[0]):
+        #     acc = f'{refnodes_number}: {num_correct/total:.4f}  ({num_correct}/{total})'
+        #     print(acc)
     
     print('\nGenerating  plots...')
     x_values = [epoch for epoch in range (1, len(losses)+1)]
@@ -312,9 +312,10 @@ if __name__ == "__main__":
     dataset_dir_test = Path(sys.argv[3])
 
     delBugtypes = []
-    # delBugtypes = ['VariableMisuseRewriteScout']
-    delBugtypes = ['VariableMisuseRewriteScout', 'ArgSwapRewriteScout', 'LiteralRewriteScout', 'BooleanOperatorRewriteScout']
-    
+    delBugtypes = ['VariableMisuseRewriteScout', 'ArgSwapRewriteScout']
+    # delBugtypes = ['VariableMisuseRewriteScout', 'ArgSwapRewriteScout', 'LiteralRewriteScout', 'BooleanOperatorRewriteScout', 'AssignRewriteScout', 'BinaryOperatorRewriteScout', 'LoopStatementRewriteScout']
+    # delBugtypes = ['ArgSwapRewriteScout', 'LiteralRewriteScout', 'BooleanOperatorRewriteScout', 'AssignRewriteScout', 'BinaryOperatorRewriteScout', 'LoopStatementRewriteScout', 'ComparisonOperatorRewriteScout']
+
     data_list_train, weights, node_label_vocab, edge_attr_vocab, num_nodes_train, num_reference_nodes_train = prepareDataWithoutVocabularies(dataset_dir_train, delBugtypes)
     data_list_valid, num_nodes_valid, num_reference_nodes_valid = prepareDataWithVocablularies(dataset_dir_valid, node_label_vocab, edge_attr_vocab, delBugtypes)
     data_list_test, num_nodes_test, num_reference_nodes_test = prepareDataWithVocablularies(dataset_dir_test, node_label_vocab, edge_attr_vocab, delBugtypes)
@@ -322,7 +323,7 @@ if __name__ == "__main__":
     num_epochs = 50
     batch_size = 1
     k_s = [1, 3, 5]
-    patience = 20
+    patience = 30
     hidden_channels = 128
     learning_rate = 0.0001
     useScaler = False
