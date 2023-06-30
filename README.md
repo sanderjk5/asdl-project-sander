@@ -10,11 +10,4 @@ The file '/gnn-model/buglocalization-gnn.py' contains the implementation of a gn
 
     $ python -m gnnmodels.buglocalization-gnn folder_training_data folder_validation_data folder_testing_data
 
-The input folders must contain files with graphs in the format defined by Buglab. The results will be stored in the textfile 'evaluation.txt'.
-
-## Supervised model for bug classification
-The file '/gnn-model/bugclassification-gnn.py' contains the implementation of a gnn model to classify python functions as buggy or not. It can be trained and evaluated with the following command:
-
-    $ python -m gnn-model.bugclassification-gnn folder_data
-
-The input folder must contain files with graphs in the format defined by Buglab. But with the hardware I used, it was not possible to train the model such that it learns to differentiate between buggy and correct methods.
+The input folders must contain files with graphs in the format defined by Buglab. The results will be stored in the textfile 'evaluation.txt'. Additional graphs show the accuracy and the loss over all training epochs.
