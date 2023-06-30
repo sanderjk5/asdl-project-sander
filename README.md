@@ -3,7 +3,7 @@ Project for the lecture Analyzing Software using Deep Learning.
 
 ## Creating the random bug dataset
 The folder '/dockerfiles' contains the fixed dockerfile which allows to create the random bug dataset of Buglab without Nvidia Cuda. The new rewriting scout in '/rewriting/rewritescouts.py' extends the bug patterns of Buglab. The bug patterns are the following: Variable Misuse, Argument Swapping, Wrong Operator (Assignment, Boolean, Binary or Comparison Operator), Wrong Literal and Wrong Loop Statement (new added by me).
-The folder '/data' contains already generated datasets that can be used for training and evaluating the model. Every graph of the dataset represents one original python function and offers additional information regarding the potential localizations where the bugs could be inserted. It states also whether a bug was inserted and if so, at which part of the code.
+The folder '/data' contains already generated datasets that can be used for training and evaluating the model. Every graph of the dataset represents one original python function and offers additional information regarding the potential localizations where the bugs could be inserted. It states also whether a bug was inserted and if so, at which part of the code. The subfolders that are called '/split', contain the splits of the data sets into training, validation and test data.
 
 ## Supervised model for bug localization
 The file '/gnn-model/buglocalization-gnn.py' contains the implementation of a gnn model to localize the bug in a buggy python function. It can be trained and evaluated with the following command:
