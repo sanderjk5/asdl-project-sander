@@ -282,7 +282,7 @@ def run_evaluation():
             eval_file.write('\n' + acc)
 
     param_headline = '\nTraining parameters: '
-    params = f'#Layers: {8}, #Hidden channels: {hidden_channels}, Learning rate: {learning_rate}, #Training graphs: {len(data_list_train)}, Use Scaler: {useScaler}'
+    params = f'#Layers: {8}, #Hidden channels: {hidden_channels}, Learning rate: {learning_rate}, #Training graphs: {len(data_list_train)}, #Avg. Reference nodes in evaluation graphs: {avg_ref_nodes_eval_graph}, Use Scaler: {useScaler}'
     bugtypes = f'\nRemoved bugtypes: '
     if len(delBugtypes) > 0:
         bugtypes += f'{delBugtypes[0]}'
@@ -301,20 +301,20 @@ if __name__ == "__main__":
     dataset_dir_test = Path(sys.argv[3])
 
     delBugtypes = []
-    delBugtypes = ['VariableMisuseRewriteScout', 'ArgSwapRewriteScout']
+    delBugtypes = ['VariableMisuseRewriteScout', 'ArgSwapRewriteScout', 'LiteralRewriteScout']
     # delBugtypes = ['VariableMisuseRewriteScout', 'ArgSwapRewriteScout', 'LiteralRewriteScout', 'BooleanOperatorRewriteScout', 'AssignRewriteScout', 'BinaryOperatorRewriteScout', 'LoopStatementRewriteScout']
-    # delBugtypes = ['ArgSwapRewriteScout', 'LiteralRewriteScout', 'BooleanOperatorRewriteScout', 'AssignRewriteScout', 'BinaryOperatorRewriteScout', 'LoopStatementRewriteScout', 'ComparisonOperatorRewriteScout']
+    # delBugtypes = ['ArgSwapRewriteScout', 'LiteralRewriteScout', 'BooleanOperatorRewriteScout', 'AssignRewriteScout', 'BinaryOperatorRewriteScout', 'ComparisonOperatorRewriteScout', 'VariableMisuseRewriteScout']
 
     data_list_train, weights, node_label_vocab, edge_attr_vocab, num_nodes_train, num_reference_nodes_train = prepareDataWithoutVocabularies(dataset_dir_train, delBugtypes)
     data_list_valid, num_nodes_valid, num_reference_nodes_valid = prepareDataWithVocablularies(dataset_dir_valid, node_label_vocab, edge_attr_vocab, delBugtypes)
     data_list_test, num_nodes_test, num_reference_nodes_test = prepareDataWithVocablularies(dataset_dir_test, node_label_vocab, edge_attr_vocab, delBugtypes)
 
-    num_epochs = 50
+    num_epochs = 200
     batch_size = 1
     k_s = [1, 3, 5]
-    patience = 30
+    patience = 50
     hidden_channels = 128
-    learning_rate = 0.0001
+    learning_rate = 0.00001
     useScaler = False
 
     train_loader = DataLoader(data_list_train, batch_size=batch_size, shuffle=True)
@@ -328,6 +328,8 @@ if __name__ == "__main__":
     print(f"# Reference nodes per validation graph: Avg: {np.mean(num_reference_nodes_valid)} Median: {np.median(num_reference_nodes_valid)} Max: {np.max(num_reference_nodes_valid)} Min: {np.min(num_reference_nodes_valid)}")
     print(f"# Nodes per evaluation graph: Avg: {np.mean(num_nodes_test)} Median: {np.median(num_nodes_test)} Max: {np.max(num_nodes_test)} Min: {np.min(num_nodes_test)}")
     print(f"# Reference nodes per evaluation graph: Avg: {np.mean(num_reference_nodes_test)} Median: {np.median(num_reference_nodes_test)} Max: {np.max(num_reference_nodes_test)} Min: {np.min(num_reference_nodes_test)}")
+    avg_ref_nodes_eval_graph = np.mean(num_reference_nodes_test)
+    
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = GNN(1, hidden_channels).to(device)
 
