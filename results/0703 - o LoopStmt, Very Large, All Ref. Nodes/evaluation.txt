@@ -393,10 +393,3 @@ LoopStatementRewriteScout: 0.0307  (47/1530)
 882: 0.0000  (0/4)
 Training parameters: #Layers: 8, #Hidden channels: 128, Learning rate: 1e-05, #Training graphs: 4138, #Avg. Reference nodes in evaluation graphs: 73.2673202614379, Use Scaler: False
 Removed bugtypes: ArgSwapRewriteScout, LiteralRewriteScout, BooleanOperatorRewriteScout, AssignRewriteScout, BinaryOperatorRewriteScout, ComparisonOperatorRewriteScout, VariableMisuseRewriteScout
-# of Graphs: 6928, # Graphs for Training: 4138, # Graphs for Validation: 1260, # Graphs for Evaluation: 1530
-# Nodes per training graph: Avg: 600.3929434509425 Median: 411.0 Max: 15320 Min: 53
-# Reference nodes per training graph: Avg: 80.53189946834219 Median: 48.0 Max: 1650 Min: 4
-# Nodes per validation graph: Avg: 613.1365079365079 Median: 381.5 Max: 27870 Min: 55
-# Reference nodes per validation graph: Avg: 70.91984126984127 Median: 44.0 Max: 1056 Min: 3
-# Nodes per evaluation graph: Avg: 559.524183006536 Median: 402.0 Max: 3784 Min: 63
-# Reference nodes per evaluation graph: Avg: 73.2673202614379 Median: 46.0 Max: 882 Min: 3

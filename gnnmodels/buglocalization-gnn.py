@@ -301,9 +301,8 @@ if __name__ == "__main__":
     dataset_dir_test = Path(sys.argv[3])
 
     delBugtypes = []
-    delBugtypes = ['VariableMisuseRewriteScout', 'ArgSwapRewriteScout', 'LiteralRewriteScout']
-    # delBugtypes = ['VariableMisuseRewriteScout', 'ArgSwapRewriteScout', 'LiteralRewriteScout', 'BooleanOperatorRewriteScout', 'AssignRewriteScout', 'BinaryOperatorRewriteScout', 'LoopStatementRewriteScout']
-    # delBugtypes = ['ArgSwapRewriteScout', 'LiteralRewriteScout', 'BooleanOperatorRewriteScout', 'AssignRewriteScout', 'BinaryOperatorRewriteScout', 'ComparisonOperatorRewriteScout', 'VariableMisuseRewriteScout']
+    # delBugtypes = ['VariableMisuseRewriteScout', 'ArgSwapRewriteScout', 'LiteralRewriteScout']
+    delBugtypes = ['ArgSwapRewriteScout', 'LiteralRewriteScout', 'BooleanOperatorRewriteScout', 'AssignRewriteScout', 'BinaryOperatorRewriteScout', 'ComparisonOperatorRewriteScout', 'VariableMisuseRewriteScout']
 
     data_list_train, weights, node_label_vocab, edge_attr_vocab, num_nodes_train, num_reference_nodes_train = prepareDataWithoutVocabularies(dataset_dir_train, delBugtypes)
     data_list_valid, num_nodes_valid, num_reference_nodes_valid = prepareDataWithVocablularies(dataset_dir_valid, node_label_vocab, edge_attr_vocab, delBugtypes)
@@ -321,6 +320,8 @@ if __name__ == "__main__":
     valid_loader = DataLoader(data_list_valid, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(data_list_test, batch_size=batch_size, shuffle=True)
 
+    num_nodes = np.concatenate([num_nodes_train, num_nodes_valid, num_nodes_test])
+    num_reference_nodes = np.concatenate([num_reference_nodes_test, num_reference_nodes_valid, num_reference_nodes_test])
     print(f'# of Graphs: {len(data_list_train)+len(data_list_valid)+len(data_list_test)}, # Graphs for Training: {len(data_list_train)}, # Graphs for Validation: {len(data_list_valid)}, # Graphs for Evaluation: {len(data_list_test)}') 
     print(f"# Nodes per training graph: Avg: {np.mean(num_nodes_train)} Median: {np.median(num_nodes_train)} Max: {np.max(num_nodes_train)} Min: {np.min(num_nodes_train)}")
     print(f"# Reference nodes per training graph: Avg: {np.mean(num_reference_nodes_train)} Median: {np.median(num_reference_nodes_train)} Max: {np.max(num_reference_nodes_train)} Min: {np.min(num_reference_nodes_train)}")
@@ -328,6 +329,9 @@ if __name__ == "__main__":
     print(f"# Reference nodes per validation graph: Avg: {np.mean(num_reference_nodes_valid)} Median: {np.median(num_reference_nodes_valid)} Max: {np.max(num_reference_nodes_valid)} Min: {np.min(num_reference_nodes_valid)}")
     print(f"# Nodes per evaluation graph: Avg: {np.mean(num_nodes_test)} Median: {np.median(num_nodes_test)} Max: {np.max(num_nodes_test)} Min: {np.min(num_nodes_test)}")
     print(f"# Reference nodes per evaluation graph: Avg: {np.mean(num_reference_nodes_test)} Median: {np.median(num_reference_nodes_test)} Max: {np.max(num_reference_nodes_test)} Min: {np.min(num_reference_nodes_test)}")
+    print(f"# Nodes per graph: Avg: {np.mean(num_nodes)} Median: {np.median(num_nodes)} Max: {np.max(num_nodes)} Min: {np.min(num_nodes)}")
+    print(f"# Reference nodes per graph: Avg: {np.mean(num_reference_nodes)} Median: {np.median(num_reference_nodes)} Max: {np.max(num_reference_nodes)} Min: {np.min(num_reference_nodes)}")
+
     avg_ref_nodes_eval_graph = np.mean(num_reference_nodes_test)
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
