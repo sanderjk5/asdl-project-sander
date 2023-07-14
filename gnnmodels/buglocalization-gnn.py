@@ -52,7 +52,7 @@ class GNN(torch.nn.Module):
 
         return x     
     
-def train(data_loader, model, optimizer, criterion, criterion_loc, useScaler): 
+def train(data_loader, model, optimizer, criterion, useScaler): 
     running_loss = 0
     model.train()
     if useScaler:
@@ -71,8 +71,7 @@ def train(data_loader, model, optimizer, criterion, criterion_loc, useScaler):
             correct_prediction = 1
 
         loss_norm = criterion(reference_out, reference_y)
-        loss_loc = criterion_loc(torch.tensor([correct_prediction], dtype=torch.float), torch.tensor([1], dtype=torch.float))/100
-        loss = loss_norm #+ loss_loc
+        loss = loss_norm
 
         if useScaler:
             scaler.scale(loss).backward()
@@ -152,7 +151,6 @@ def run_training():
     print('\nTrain...')   
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     criterion = torch.nn.CrossEntropyLoss(weight=weights)
-    criterion_loc = torch.nn.BCELoss()
     
     losses = []
     train_accs, valid_accs = np.empty([len(k_s), num_epochs]), np.empty([len(k_s), num_epochs])
@@ -163,10 +161,10 @@ def run_training():
             print(f'Accuracy has not improved for {num_epochs_not_improved} epochs. Stopping.')
             break
         result = f'Epoch: {epoch:02d}'
-        loss = train(train_loader, model, optimizer, criterion, criterion_loc, useScaler)
+        loss = train(train_loader, model, optimizer, criterion, useScaler)
         losses.append(loss)
         train_acc, _, _ = test(train_loader, model, k_s)
-        valid_acc, localization_per_bugtype, localization_per_refnodes_number = test(valid_loader, model, k_s)
+        valid_acc, _, _ = test(valid_loader, model, k_s)
         for i in range(len(k_s)):
             train_accs[i][epoch-1] = train_acc[i]
             valid_accs[i][epoch-1] = valid_acc[i]
@@ -180,13 +178,6 @@ def run_training():
             num_epochs_not_improved = 0
         else:
             num_epochs_not_improved += 1
-
-        # for bugtype, (num_correct, total) in sorted(localization_per_bugtype.items(), key=lambda item: item[0]):
-        #     acc = f'{bugtype}: {num_correct/total:.4f}  ({num_correct}/{total})'
-        #     print(acc)
-        # for refnodes_number, (num_correct, total) in sorted(localization_per_refnodes_number.items(), key=lambda item: item[0]):
-        #     acc = f'{refnodes_number}: {num_correct/total:.4f}  ({num_correct}/{total})'
-        #     print(acc)
     
     print('\nGenerating  plots...')
     x_values = [epoch for epoch in range (1, len(losses)+1)]
@@ -302,7 +293,7 @@ if __name__ == "__main__":
 
     delBugtypes = []
     # delBugtypes = ['VariableMisuseRewriteScout', 'ArgSwapRewriteScout', 'LiteralRewriteScout']
-    delBugtypes = ['ArgSwapRewriteScout', 'LiteralRewriteScout', 'BooleanOperatorRewriteScout', 'AssignRewriteScout', 'BinaryOperatorRewriteScout', 'ComparisonOperatorRewriteScout', 'VariableMisuseRewriteScout']
+    # delBugtypes = ['ArgSwapRewriteScout', 'LiteralRewriteScout', 'BooleanOperatorRewriteScout', 'AssignRewriteScout', 'BinaryOperatorRewriteScout', 'ComparisonOperatorRewriteScout', 'VariableMisuseRewriteScout']
 
     data_list_train, weights, node_label_vocab, edge_attr_vocab, num_nodes_train, num_reference_nodes_train = prepareDataWithoutVocabularies(dataset_dir_train, delBugtypes)
     data_list_valid, num_nodes_valid, num_reference_nodes_valid = prepareDataWithVocablularies(dataset_dir_valid, node_label_vocab, edge_attr_vocab, delBugtypes)
