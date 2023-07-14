@@ -12,7 +12,10 @@ from collections import defaultdict
 import random
 
 class GNN(torch.nn.Module):
+    """ A graph neural network to perform the bug localization task. """
+
     def __init__(self, input_size, hidden_channels):
+        """ Initializes the layers of the GNN. """
         super(GNN, self).__init__()
         self.conv1 = GCNConv(
             input_size, hidden_channels)
@@ -32,6 +35,7 @@ class GNN(torch.nn.Module):
             hidden_channels, 2)
     
     def forward(self, data):
+        """ Performs the forward step of the GNN. Combines the layers with ReLU activation functions and adds dropouts. """
         x = self.conv1(data.x, data.edge_index, data.edge_attr)
         x = x.relu()
         x = self.conv2(x, data.edge_index, data.edge_attr)
@@ -52,27 +56,24 @@ class GNN(torch.nn.Module):
 
         return x     
     
-def train(data_loader, model, optimizer, criterion, useScaler): 
+def train(data_loader, model, optimizer, criterion, useScaler):
+    """ Performs a training step for a given model with the given optimizer and loss function. """
     running_loss = 0
     model.train()
+    # use a scaler if the flag is set
     if useScaler:
         scaler = torch.cuda.amp.GradScaler(enabled=False)
     for data in data_loader:
         optimizer.zero_grad()
         out = model(data)
+
+        # use the mask to select the reference nodes of the output of the model and the target vector
         reference_indices = (data.mask == 1).nonzero(as_tuple=True)[0]
         reference_out = torch.index_select(out, 0, reference_indices)
         reference_y = torch.index_select(data.y, 0, reference_indices)
 
-        y_index = (reference_y == 1).nonzero(as_tuple=True)[0].item()
-        pred_max_index = torch.argmax(F.softmax(reference_out, dim=1), dim=0)[1]
-        correct_prediction = 0
-        if y_index == pred_max_index:
-            correct_prediction = 1
-
-        loss_norm = criterion(reference_out, reference_y)
-        loss = loss_norm
-
+        # compute the loss and perform the gradient descent
+        loss = criterion(reference_out, reference_y)
         if useScaler:
             scaler.scale(loss).backward()
             scaler.step(optimizer)
@@ -80,23 +81,30 @@ def train(data_loader, model, optimizer, criterion, useScaler):
         else:
             loss.backward()
             optimizer.step()
+
         running_loss += loss.item()
     return running_loss/len(data_loader)
         
 def test(data_loader, model, k_s):
+    """ Predicts the output of the given model on the given datalist. """
     model.eval()
+
+    # preparation for the top-k search and evaluation
     correct_per_k = [0] * len(k_s)
     localization_per_bugtype = defaultdict(lambda: np.array([0, 0], dtype=np.int32))
     localization_per_refnodes_number = defaultdict(lambda: np.array([0, 0], dtype=np.int32))
+
     for data in data_loader:
         out = model(data)  
 
+        # use the mask to select the reference nodes
         reference_indices = (data.mask == 1).nonzero(as_tuple=True)[0]
         reference_y = torch.index_select(data.y, 0, reference_indices)
         y_index = (reference_y == 1).nonzero(as_tuple=True)[0].item()
         reference_out = F.softmax(torch.index_select(out, 0, reference_indices), dim=1)
         num_ref_nodes = reference_out.size()[0]
 
+        # perform the top-k search for each given k
         for i in range(len(k_s)):   
             k = k_s[i]     
             if(num_ref_nodes >= k):
@@ -107,6 +115,7 @@ def test(data_loader, model, k_s):
             if y_index in pred_max_indices:
                 correct_per_k[i] += 1
         
+        # evaluation per bugtype and number of nodes
         pred_max_index = torch.argmax(reference_out, dim=0)[1]
         if y_index == pred_max_index:
             localization_per_bugtype[data.bugtype[0]] += [1, 1]
@@ -118,16 +127,24 @@ def test(data_loader, model, k_s):
     return ([correct/len(data_loader) for correct in correct_per_k], localization_per_bugtype, localization_per_refnodes_number)
 
 def baseline(data_loader, k_s):
+    """ Performs a baseline prediction on the given data that randomly selects the location of the bugs. """
+
+    # preparation for the top-k search and evaluation
     correct_per_k = [0] * len(k_s)
     localization_per_bugtype = defaultdict(lambda: np.array([0, 0], dtype=np.int32))
     localization_per_refnodes_number = defaultdict(lambda: np.array([0, 0], dtype=np.int32))
+
     for data in data_loader:
+        # use the mask to select the reference nodes
         reference_indices = (data.mask == 1).nonzero(as_tuple=True)[0]
         num_ref_nodes = len(reference_indices)
         reference_y = torch.index_select(data.y, 0, reference_indices)
         y_index = (reference_y == 1).nonzero(as_tuple=True)[0].item()
+
+        # assign a random probability to every reference node
         random_reference_out = torch.tensor([random.random() for i in range(0, num_ref_nodes)], dtype=torch.float)
 
+        # use the random probabilities to perform the top-k search for each k
         for i in range(len(k_s)):   
             k = k_s[i]     
             if(num_ref_nodes >= k):
@@ -137,6 +154,7 @@ def baseline(data_loader, k_s):
             if y_index in pred_max_indices:
                 correct_per_k[i] += 1
         
+        # evaluation per bugtype and number of nodes
         pred_max_index = torch.argmax(random_reference_out, dim=0)
         if y_index == pred_max_index:
             localization_per_bugtype[data.bugtype[0]] += [1, 1]
@@ -148,21 +166,35 @@ def baseline(data_loader, k_s):
     return ([correct/len(data_loader) for correct in correct_per_k], localization_per_bugtype, localization_per_refnodes_number)
 
 def run_training():
+    """ Trains the model. """
+
     print('\nTrain...')   
+
+    # initialize optimizer and loss function
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     criterion = torch.nn.CrossEntropyLoss(weight=weights)
     
+    # initialize for evaluation of the training
     losses = []
     train_accs, valid_accs = np.empty([len(k_s), num_epochs]), np.empty([len(k_s), num_epochs])
     num_epochs_not_improved, best_acc = 0, 0
 
+    # train the model over several epochs
     for epoch in range (1, num_epochs+1):
+        # stop the training if it doesn't improve over a defined number of epochs
         if num_epochs_not_improved > patience:
             print(f'Accuracy has not improved for {num_epochs_not_improved} epochs. Stopping.')
             break
+
         result = f'Epoch: {epoch:02d}'
+
+        # perform the training step
         loss = train(train_loader, model, optimizer, criterion, useScaler)
+
+        # store the loss
         losses.append(loss)
+
+        # calculate the accuracies of the predictions on training and validation data
         train_acc, _, _ = test(train_loader, model, k_s)
         valid_acc, _, _ = test(valid_loader, model, k_s)
         for i in range(len(k_s)):
@@ -173,12 +205,14 @@ def run_training():
         result += f', Loss: {loss:.4f}'
         print(result)
 
+        # check if the accuracy of the top-1 search on the validation set has improved
         if valid_acc[0] > best_acc:
             best_acc = valid_acc[0]
             num_epochs_not_improved = 0
         else:
             num_epochs_not_improved += 1
     
+    # generate plots that show the losses and accuracies over the training epochs
     print('\nGenerating  plots...')
     x_values = [epoch for epoch in range (1, len(losses)+1)]
     plt.figure(0)
