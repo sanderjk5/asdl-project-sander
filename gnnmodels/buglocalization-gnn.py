@@ -10,12 +10,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections import defaultdict
 import random
+from torch_geometric.data import Data
+from typing import List, Tuple
+from dpu_utils.mlutils import Vocabulary
+from torch.optim import Optimizer
 
 class GNN(torch.nn.Module):
     """ A graph neural network to perform the bug localization task. """
 
-    def __init__(self, input_size, hidden_channels):
-        """ Initializes the layers of the GNN. """
+    def __init__(self, input_size: int, hidden_channels: int):
+        """ 
+        Initializes the layers of the GNN.
+
+            Parameters:
+                input_size (int): Number of node features
+                hidden_channels (int): Number of hidden channels
+        """
         super(GNN, self).__init__()
         self.conv1 = GCNConv(
             input_size, hidden_channels)
@@ -34,8 +44,16 @@ class GNN(torch.nn.Module):
         self.conv8 = GCNConv(
             hidden_channels, 2)
     
-    def forward(self, data):
-        """ Performs the forward step of the GNN. Combines the layers with ReLU activation functions and adds dropouts. """
+    def forward(self, data: Data):
+        """ 
+        Performs the forward step of the GNN. Combines the layers with ReLU activation functions and adds dropouts. 
+
+            Parameters:
+                data (Data): The graph data
+
+            Returns:
+                x: Output of the GNN
+        """
         x = self.conv1(data.x, data.edge_index, data.edge_attr)
         x = x.relu()
         x = self.conv2(x, data.edge_index, data.edge_attr)
@@ -56,8 +74,21 @@ class GNN(torch.nn.Module):
 
         return x     
     
-def train(data_loader, model, optimizer, criterion, useScaler):
-    """ Performs a training step for a given model with the given optimizer and loss function. """
+def train(data_loader: List[Data], model: GNN, optimizer: Optimizer, criterion, useScaler: bool) -> float:
+    """ 
+    Performs a training step for a given model with the given optimizer and loss function. 
+
+        Parameters:
+            data_loader (Dataloader): The trainings dataset
+            model (GNN): The graph neural network
+            optimizer (Optimizer): The optimizer
+            critiorion: The loss function
+            useScaler (bool): Flag, if a scaler should be used
+
+        Returns:
+            loss (float): The average loss of the training step
+    """
+
     running_loss = 0
     model.train()
     # use a scaler if the flag is set
@@ -85,8 +116,18 @@ def train(data_loader, model, optimizer, criterion, useScaler):
         running_loss += loss.item()
     return running_loss/len(data_loader)
         
-def test(data_loader, model, k_s):
-    """ Predicts the output of the given model on the given datalist. """
+def test(data_loader: DataLoader, model: GNN, k_s: List[int]) -> Tuple[List[float], List[float], List[float]]:
+    """ 
+    Predicts the output of the given model on the given datalist. 
+
+        Parameters:
+            data_loader (Dataloader): The trainings dataset
+            model (GNN): The graph neural network
+            k_s (List[int]): Defines the parameter k for the top-k searches
+
+        Returns:
+            accuracies (Tuple[List[float], List[float], List[float]]): The overall accuracies of the top-k searches, accuracies per bugtypes and accuracies by number of reference nodes.
+    """
     model.eval()
 
     # preparation for the top-k search and evaluation
@@ -126,8 +167,17 @@ def test(data_loader, model, k_s):
 
     return ([correct/len(data_loader) for correct in correct_per_k], localization_per_bugtype, localization_per_refnodes_number)
 
-def baseline(data_loader, k_s):
-    """ Performs a baseline prediction on the given data that randomly selects the location of the bugs. """
+def baseline(data_loader: DataLoader, k_s: List[int]) -> Tuple[List[float], List[float], List[float]]:
+    """ 
+    Performs a baseline prediction on the given data that randomly selects the location of the bugs. 
+    
+        Parameters:
+            data_loader (Dataloader): The trainings dataset
+            k_s (List[int]): Defines the parameter k for the top-k searches
+
+        Returns:
+            accuracies (Tuple[List[float], List[float], List[float]]): The overall accuracies of the top-k searches, accuracies per bugtypes and accuracies by number of reference nodes.
+    """
 
     # preparation for the top-k search and evaluation
     correct_per_k = [0] * len(k_s)
@@ -166,7 +216,9 @@ def baseline(data_loader, k_s):
     return ([correct/len(data_loader) for correct in correct_per_k], localization_per_bugtype, localization_per_refnodes_number)
 
 def run_training():
-    """ Trains the model. """
+    """ 
+    Trains the model. 
+    """
 
     print('\nTrain...')   
 
@@ -242,9 +294,17 @@ def run_training():
     plt.close()
 
 def run_evaluation():
+    """ 
+    Evaluates the model. 
+    """
     print('\nEvaluate...') 
+
+    # accuracies of the results of the predictions on the test data
     test_acc, test_localization_per_bugtype, test_localization_per_refnodes_number = test(test_loader, model, k_s)
+    # baseline accuracies on the test data
     baseline_acc, baseline_localization_per_bugtype, baseline_localization_per_refnodes_number = baseline(test_loader, k_s)
+
+    # create the text file to store the results
     eval_file_name = 'evaluation.txt'
     eval_headline = 'Evaluation results:\n'
     mode = 'w+'
@@ -254,6 +314,7 @@ def run_evaluation():
     eval_file = open(eval_file_name, mode)
     eval_file.write(eval_headline)
 
+    # overall accuracies
     accs_headline = '(gnn) Accuracies of the localization task: '
     accs = f'Top {k_s[0]}: {test_acc[0]:.4f}'
     for i in range(1, len(k_s)):
@@ -264,6 +325,7 @@ def run_evaluation():
     print(accs_headline)
     print(accs)
 
+    # accuracies per bug type
     accs_headline = '\n(gnn) Accuracies of the localization task per bug type: '
     print(accs_headline)
     eval_file.write(accs_headline)
@@ -272,6 +334,7 @@ def run_evaluation():
         print(acc)
         eval_file.write('\n' + acc)
 
+    # accuracies per number of reference nodes
     accs_headline = '\n(gnn) Accuracies of the localization task per number of reference nodes: '
     print(accs_headline)
     eval_file.write(accs_headline)
@@ -280,6 +343,7 @@ def run_evaluation():
             print(acc)
             eval_file.write('\n' + acc)
 
+    # overall baseline accuracies
     accs_headline = '\n(baseline) Accuracies of the localization task: '
     accs = f'Top {k_s[0]}: {baseline_acc[0]:.4f}'
     for i in range(1, len(k_s)):
@@ -290,6 +354,7 @@ def run_evaluation():
     print(accs_headline)
     print(accs)
 
+    # baseline accuracies per bug type
     accs_headline = '\n(baseline) Accuracies of the localization task per bug type: '
     print(accs_headline)
     eval_file.write(accs_headline)
@@ -298,6 +363,7 @@ def run_evaluation():
         print(acc)
         eval_file.write('\n' + acc)
 
+    # baseline accuracies per number of reference nodes
     accs_headline = '\n(baseline) Accuracies of the localization task per number of reference nodes: '
     print(accs_headline)
     eval_file.write(accs_headline)
@@ -306,6 +372,7 @@ def run_evaluation():
             print(acc)
             eval_file.write('\n' + acc)
 
+    # store the training information
     param_headline = '\nTraining parameters: '
     params = f'#Layers: {8}, #Hidden channels: {hidden_channels}, Learning rate: {learning_rate}, #Training graphs: {len(data_list_train)}, #Avg. Reference nodes in evaluation graphs: {avg_ref_nodes_eval_graph}, Use Scaler: {useScaler}'
     bugtypes = f'\nRemoved bugtypes: '
@@ -321,18 +388,24 @@ def run_evaluation():
     eval_file.close()
     
 if __name__ == "__main__":
+    """
+    Creates the datasets and starts training and evaluation.
+    """
     dataset_dir_train = Path(sys.argv[1])
     dataset_dir_valid = Path(sys.argv[2])
     dataset_dir_test = Path(sys.argv[3])
 
+    # bugtypes that should not be included
     delBugtypes = []
     # delBugtypes = ['VariableMisuseRewriteScout', 'ArgSwapRewriteScout', 'LiteralRewriteScout']
     # delBugtypes = ['ArgSwapRewriteScout', 'LiteralRewriteScout', 'BooleanOperatorRewriteScout', 'AssignRewriteScout', 'BinaryOperatorRewriteScout', 'ComparisonOperatorRewriteScout', 'VariableMisuseRewriteScout']
 
+    # create the datasets
     data_list_train, weights, node_label_vocab, edge_attr_vocab, num_nodes_train, num_reference_nodes_train = prepareDataWithoutVocabularies(dataset_dir_train, delBugtypes)
     data_list_valid, num_nodes_valid, num_reference_nodes_valid = prepareDataWithVocablularies(dataset_dir_valid, node_label_vocab, edge_attr_vocab, delBugtypes)
     data_list_test, num_nodes_test, num_reference_nodes_test = prepareDataWithVocablularies(dataset_dir_test, node_label_vocab, edge_attr_vocab, delBugtypes)
-
+    
+    # set the training parameters
     num_epochs = 200
     batch_size = 1
     k_s = [1, 3, 5]
@@ -341,10 +414,13 @@ if __name__ == "__main__":
     learning_rate = 0.00001
     useScaler = False
 
+    # create the data loader
     train_loader = DataLoader(data_list_train, batch_size=batch_size, shuffle=True)
     valid_loader = DataLoader(data_list_valid, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(data_list_test, batch_size=batch_size, shuffle=True)
 
+
+    # print stats of the datasets
     num_nodes = np.concatenate([num_nodes_train, num_nodes_valid, num_nodes_test])
     num_reference_nodes = np.concatenate([num_reference_nodes_test, num_reference_nodes_valid, num_reference_nodes_test])
     print(f'# of Graphs: {len(data_list_train)+len(data_list_valid)+len(data_list_test)}, # Graphs for Training: {len(data_list_train)}, # Graphs for Validation: {len(data_list_valid)}, # Graphs for Evaluation: {len(data_list_test)}') 
@@ -359,8 +435,10 @@ if __name__ == "__main__":
 
     avg_ref_nodes_eval_graph = np.mean(num_reference_nodes_test)
     
+    # initialize the model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = GNN(1, hidden_channels).to(device)
 
+    # start training and evaluation
     run_training()
     run_evaluation()
