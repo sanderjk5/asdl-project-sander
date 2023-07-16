@@ -6,23 +6,24 @@ from typing import List, Tuple
 from dpu_utils.mlutils import Vocabulary
 import numpy as np
 
-def prepareDataWithoutVocabularies(dataset_dir: RichPath, delBugtypes: List[str]) -> Tuple[List, torch.Tensor, Vocabulary, Vocabulary, List, List]:
+def prepareDataWithoutVocabularies(dataset_dir: RichPath, delBugtypes: List[str], restrict_num_ref_nodes: bool) -> Tuple[List, torch.Tensor, Vocabulary, Vocabulary, List, List]:
     """ 
     Creates vocabularies to abstract the node labels and edge types and creates the dataset afterwards. 
 
         Parameters:
             dataset_dir (RichPath): The path to the folder that contains the data
             delBugtypes: (List[str]): The bug types that should be removed
+            restrict_num_ref_nodes: (bool): Flag, if only graphs with maximal 25 reference nodes should be used
 
         Returns:
             data (Tuple[List, torch.Tensor, Vocabulary, Vocabulary, List, List]): The datalist, the weights, the vocabualaries and number of nodes.
     """
     assert dataset_dir.exists()
     node_label_vocab, edge_attr_vocab = create_vocabs(dataset_dir)
-    data_list, weights, num_nodes, num_reference_nodes = prepareData(dataset_dir, node_label_vocab, edge_attr_vocab, delBugtypes)
+    data_list, weights, num_nodes, num_reference_nodes = prepareData(dataset_dir, node_label_vocab, edge_attr_vocab, delBugtypes, restrict_num_ref_nodes)
     return (data_list, weights, node_label_vocab, edge_attr_vocab, num_nodes, num_reference_nodes)
 
-def prepareDataWithVocablularies(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_vocab: Vocabulary, delBugtypes: List[str]) -> Tuple[List, List, List]:
+def prepareDataWithVocablularies(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_vocab: Vocabulary, delBugtypes: List[str], restrict_num_ref_nodes: bool) -> Tuple[List, List, List]:
     """ 
     Creates the dataset using the given vocabularies. 
 
@@ -31,15 +32,16 @@ def prepareDataWithVocablularies(dataset_dir: RichPath, node_label_vocab: Vocabu
             node_label_vocab (Vocabulary): The vocabulary of the node labels
             edge_attr_vocab (Vocabulary): The vocabulary of the edge attributes
             delBugtypes: (List[str]): The bug types that should be removed
+            restrict_num_ref_nodes: (bool): Flag, if only graphs with maximal 25 reference nodes should be used
 
         Returns:
             data (Tuple[List, List, List]): The datalist, the weights and number of nodes.
     """
     assert dataset_dir.exists()
-    data_list, _, num_nodes, num_reference_nodes = prepareData(dataset_dir, node_label_vocab, edge_attr_vocab, delBugtypes)
+    data_list, _, num_nodes, num_reference_nodes = prepareData(dataset_dir, node_label_vocab, edge_attr_vocab, delBugtypes, restrict_num_ref_nodes)
     return (data_list, num_nodes, num_reference_nodes)
 
-def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_vocab: Vocabulary, delBugtypes: List[str]) -> Tuple[List, torch.Tensor, List, List]:
+def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_vocab: Vocabulary, delBugtypes: List[str], restrict_num_ref_nodes: bool) -> Tuple[List, torch.Tensor, List, List]:
     """ 
     Converts the given graphs into Data objects such that they can be used by the graph neural network.
 
@@ -48,10 +50,12 @@ def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_v
             node_label_vocab (Vocabulary): The vocabulary of the node labels
             edge_attr_vocab (Vocabulary): The vocabulary of the edge attributes
             delBugtypes: (List[str]): The bug types that should be removed
+            restrict_num_ref_nodes: (bool): Flag, if only graphs with maximal 25 reference nodes should be used
 
         Returns:
             data (Tuple[List, torch.Tensor, List, List]): The datalist, the weights and number of nodes.
     """
+    print(restrict_num_ref_nodes)
     datalist, num_nodes, num_reference_nodes = [], [], []
     num_unique_ref_nodes = 0
 
@@ -72,10 +76,11 @@ def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_v
 
                 # get the unique reference nodes
                 unique_reference_nodes = np.unique(graph["graph"]["reference_nodes"])
+                if restrict_num_ref_nodes and len(unique_reference_nodes) > 25:
+                    print('test')
+                    continue
                 num_unique_ref_nodes += len(unique_reference_nodes)
                 num_reference_nodes.append(len(unique_reference_nodes))
-                # if len(unique_reference_nodes) > 25:
-                #     continue
 
                 # tensorize the nodes
                 nodes = []

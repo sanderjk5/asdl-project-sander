@@ -1,3 +1,12 @@
+#!/usr/bin/env python
+"""
+Usage:
+    buglocalization-gnn.py [options] TRAIN_DATA_PATH VALID_DATA_PATH TEST_DATA_PATH
+
+Options:
+    --scenario=<scenario>         Restrict the datasets according to the defined scenarios in the report. Possible values: 1, 2, 3, 4, 5, 6. [default: 1]
+    -h --help                     Show this screen.
+"""
 import torch
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
@@ -14,6 +23,7 @@ from torch_geometric.data import Data
 from typing import List, Tuple
 from dpu_utils.mlutils import Vocabulary
 from torch.optim import Optimizer
+from docopt import docopt
 
 class GNN(torch.nn.Module):
     """ A graph neural network to perform the bug localization task. """
@@ -391,19 +401,30 @@ if __name__ == "__main__":
     """
     Creates the datasets and starts training and evaluation.
     """
-    dataset_dir_train = Path(sys.argv[1])
-    dataset_dir_valid = Path(sys.argv[2])
-    dataset_dir_test = Path(sys.argv[3])
+    args = docopt(__doc__)
+    dataset_dir_train = Path(args["TRAIN_DATA_PATH"])
+    dataset_dir_valid = Path(args["VALID_DATA_PATH"])
+    dataset_dir_test = Path(args["TEST_DATA_PATH"])
+    if args["--scenario"]:
+        scenario = args["--scenario"]
+    else:
+        scenario = '1'
 
     # bugtypes that should not be included
     delBugtypes = []
-    # delBugtypes = ['VariableMisuseRewriteScout', 'ArgSwapRewriteScout', 'LiteralRewriteScout']
-    # delBugtypes = ['ArgSwapRewriteScout', 'LiteralRewriteScout', 'BooleanOperatorRewriteScout', 'AssignRewriteScout', 'BinaryOperatorRewriteScout', 'ComparisonOperatorRewriteScout', 'VariableMisuseRewriteScout']
+    if scenario == '3' or scenario == '4':
+        delBugtypes = ['VariableMisuseRewriteScout', 'ArgSwapRewriteScout', 'LiteralRewriteScout']
+    if scenario == '5' or scenario == '6':
+        delBugtypes = ['ArgSwapRewriteScout', 'LiteralRewriteScout', 'BooleanOperatorRewriteScout', 'AssignRewriteScout', 'BinaryOperatorRewriteScout', 'ComparisonOperatorRewriteScout', 'VariableMisuseRewriteScout']
+
+    restrict_num_ref_nodes = False
+    if scenario == '2' or scenario == '4' or scenario == '6':
+        restrict_num_ref_nodes = True
 
     # create the datasets
-    data_list_train, weights, node_label_vocab, edge_attr_vocab, num_nodes_train, num_reference_nodes_train = prepareDataWithoutVocabularies(dataset_dir_train, delBugtypes)
-    data_list_valid, num_nodes_valid, num_reference_nodes_valid = prepareDataWithVocablularies(dataset_dir_valid, node_label_vocab, edge_attr_vocab, delBugtypes)
-    data_list_test, num_nodes_test, num_reference_nodes_test = prepareDataWithVocablularies(dataset_dir_test, node_label_vocab, edge_attr_vocab, delBugtypes)
+    data_list_train, weights, node_label_vocab, edge_attr_vocab, num_nodes_train, num_reference_nodes_train = prepareDataWithoutVocabularies(dataset_dir_train, delBugtypes, restrict_num_ref_nodes)
+    data_list_valid, num_nodes_valid, num_reference_nodes_valid = prepareDataWithVocablularies(dataset_dir_valid, node_label_vocab, edge_attr_vocab, delBugtypes, restrict_num_ref_nodes)
+    data_list_test, num_nodes_test, num_reference_nodes_test = prepareDataWithVocablularies(dataset_dir_test, node_label_vocab, edge_attr_vocab, delBugtypes, restrict_num_ref_nodes)
     
     # set the training parameters
     num_epochs = 200
@@ -412,7 +433,11 @@ if __name__ == "__main__":
     patience = 50
     hidden_channels = 128
     learning_rate = 0.00001
-    useScaler = False
+    useScaler = True
+
+    if scenario == '1' or scenario == '2':
+       num_epochs = 100 
+       patience = 30
 
     # create the data loader
     train_loader = DataLoader(data_list_train, batch_size=batch_size, shuffle=True)
