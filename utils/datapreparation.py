@@ -55,7 +55,6 @@ def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_v
         Returns:
             data (Tuple[List, torch.Tensor, List, List]): The datalist, the weights and number of nodes.
     """
-    print(restrict_num_ref_nodes)
     datalist, num_nodes, num_reference_nodes = [], [], []
     num_unique_ref_nodes = 0
 
@@ -77,7 +76,6 @@ def prepareData(dataset_dir: RichPath, node_label_vocab: Vocabulary, edge_attr_v
                 # get the unique reference nodes
                 unique_reference_nodes = np.unique(graph["graph"]["reference_nodes"])
                 if restrict_num_ref_nodes and len(unique_reference_nodes) > 25:
-                    print('test')
                     continue
                 num_unique_ref_nodes += len(unique_reference_nodes)
                 num_reference_nodes.append(len(unique_reference_nodes))
