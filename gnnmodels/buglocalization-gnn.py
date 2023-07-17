@@ -433,11 +433,14 @@ if __name__ == "__main__":
     patience = 50
     hidden_channels = 128
     learning_rate = 0.00001
-    useScaler = True
+    useScaler = False
 
     if scenario == '1' or scenario == '2':
        num_epochs = 100 
        patience = 30
+
+    if scenario == '1' or scenario == '2' or scenario == '3':
+       useScaler = True
 
     # create the data loader
     train_loader = DataLoader(data_list_train, batch_size=batch_size, shuffle=True)
