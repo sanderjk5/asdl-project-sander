@@ -29,4 +29,5 @@ It is possible to configure which defined scenario described in my report should
 * 4: Without the bug patterns "VarMisuse", "ArgSwap", "WrongLiterals"; maximal 25 reference nodes
 * 5: Only the bug pattern "WrongLoopStatements"; unrestricted number of reference nodes
 * 6: Only the bug pattern "WrongLoopStatements"; maximal 25 reference nodes
+
 The input folders must contain files with graphs in the format defined by Buglab. The results will be stored in the textfile 'evaluation.txt'. Additional plots show the accuracy and the loss over all training epochs.
