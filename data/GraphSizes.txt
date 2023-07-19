@@ -1,0 +1,65 @@
+Graph Sizes: 
+All Bugs, All #Ref. Nodes:
+# of Graphs: 84340, # Graphs for Training: 53475, # Graphs for Validation: 13469, # Graphs for Evaluation: 17396
+# Nodes per training graph: Avg: 257.11397849462367 Median: 166.0 Max: 15320 Min: 22
+# Reference nodes per training graph: Avg: 26.727554932211312 Median: 14.0 Max: 1650 Min: 1
+# Nodes per validation graph: Avg: 261.4773182864355 Median: 172.0 Max: 27870 Min: 27
+# Reference nodes per validation graph: Avg: 26.3907491276264 Median: 14.0 Max: 1056 Min: 1
+# Nodes per evaluation graph: Avg: 255.94579213612326 Median: 172.0 Max: 6131 Min: 21
+# Nodes per graph: Avg: 257.56984823334125 Median: 168.0 Max: 27870 Min: 21
+# Reference nodes per graph: Avg: 26.874515654462193 Median: 14.0 Max: 1056 Min: 1
+
+All Bugs, Max. 25 #Ref. Nodes:
+# of Graphs: 60544, # Graphs for Training: 38552, # Graphs for Validation: 9713, # Graphs for Evaluation: 12279
+# Nodes per training graph: Avg: 143.92980908902263 Median: 131.0 Max: 788 Min: 22
+# Reference nodes per training graph: Avg: 10.810204399252957 Median: 9.0 Max: 25 Min: 1
+# Nodes per validation graph: Avg: 146.18295068464943 Median: 134.0 Max: 1261 Min: 27
+# Reference nodes per validation graph: Avg: 11.035416452177493 Median: 10.0 Max: 25 Min: 1
+# Nodes per evaluation graph: Avg: 143.86537991693135 Median: 132.0 Max: 922 Min: 21
+# Reference nodes per evaluation graph: Avg: 10.812851209381872 Median: 9.0 Max: 25 Min: 1
+# Nodes per graph: Avg: 144.27821088794926 Median: 132.0 Max: 1261 Min: 21
+# Reference nodes per graph: Avg: 10.875930086662192 Median: 10.0 Max: 25 Min: 1
+
+Without ArgSwap & VarMisuse & WrongLiteral, All #Ref. Nodes:
+# of Graphs: 46042, # Graphs for Training: 27912, # Graphs for Validation: 8334, # Graphs for Evaluation: 9796
+# Nodes per training graph: Avg: 277.0470765262253 Median: 175.0 Max: 15320 Min: 22
+# Reference nodes per training graph: Avg: 29.547721410146174 Median: 15.0 Max: 1650 Min: 2
+# Nodes per validation graph: Avg: 282.08435325173986 Median: 179.0 Max: 27870 Min: 27
+# Reference nodes per validation graph: Avg: 28.72126229901608 Median: 15.0 Max: 1056 Min: 2
+# Nodes per evaluation graph: Avg: 272.40832993058393 Median: 183.0 Max: 3784 Min: 23
+# Reference nodes per evaluation graph: Avg: 28.930073499387504 Median: 15.0 Max: 882 Min: 2
+# Nodes per graph: Avg: 276.9719169453977 Median: 178.0 Max: 27870 Min: 22
+# Reference nodes per graph: Avg: 28.867757645205185 Median: 15.0 Max: 1056 Min: 2
+
+Without ArgSwap & VarMisuse & WrongLiteral, Max. 25 #Ref. Nodes:
+# of Graphs: 31793, # Graphs for Training: 19251, # Graphs for Validation: 5853, # Graphs for Evaluation: 6689
+# Nodes per training graph: Avg: 144.7952314165498 Median: 130.0 Max: 788 Min: 22
+# Reference nodes per training graph: Avg: 10.900057139888837 Median: 10.0 Max: 25 Min: 2
+# Nodes per validation graph: Avg: 148.55322057064754 Median: 134.0 Max: 1261 Min: 27
+# Reference nodes per validation graph: Avg: 11.07568768153084 Median: 10.0 Max: 25 Min: 2
+# Nodes per evaluation graph: Avg: 148.07489908805502 Median: 134.0 Max: 921 Min: 23
+# Reference nodes per evaluation graph: Avg: 11.21423232172223 Median: 10.0 Max: 25 Min: 2
+# Nodes per graph: Avg: 146.17708300569308 Median: 132.0 Max: 1261 Min: 22
+# Reference nodes per graph: Avg: 11.172065935208778 Median: 10.0 Max: 25 Min: 2
+
+Only Wrong Loop Statement, All #Ref. Nodes:
+# of Graphs: 6928, # Graphs for Training: 4138, # Graphs for Validation: 1260, # Graphs for Evaluation: 1530
+# Nodes per training graph: Avg: 600.3929434509425 Median: 411.0 Max: 15320 Min: 53
+# Reference nodes per training graph: Avg: 80.53189946834219 Median: 48.0 Max: 1650 Min: 4
+# Nodes per validation graph: Avg: 613.1365079365079 Median: 381.5 Max: 27870 Min: 55
+# Reference nodes per validation graph: Avg: 70.91984126984127 Median: 44.0 Max: 1056 Min: 3
+# Nodes per evaluation graph: Avg: 559.524183006536 Median: 402.0 Max: 3784 Min: 63
+# Reference nodes per evaluation graph: Avg: 73.2673202614379 Median: 46.0 Max: 882 Min: 3
+# Nodes per graph: Avg: 593.6850461893764 Median: 405.0 Max: 27870 Min: 53
+# Reference nodes per graph: Avg: 72.5826388888889 Median: 45.0 Max: 1056 Min: 3
+
+Only Wrong Loop Statement, Max. 25 #Ref. Nodes:
+# of Graphs: 1783, # Graphs for Training: 1014, # Graphs for Validation: 361, # Graphs for Evaluation: 408
+# Nodes per training graph: Avg: 187.8560157790927 Median: 182.5 Max: 567 Min: 53
+# Reference nodes per training graph: Avg: 16.622287968441814 Median: 17.0 Max: 25 Min: 4
+# Nodes per validation graph: Avg: 185.39612188365652 Median: 176.0 Max: 479 Min: 55
+# Reference nodes per validation graph: Avg: 15.739612188365651 Median: 16.0 Max: 25 Min: 3
+# Nodes per evaluation graph: Avg: 201.15441176470588 Median: 189.0 Max: 582 Min: 63
+# Reference nodes per evaluation graph: Avg: 16.612745098039216 Median: 17.0 Max: 25 Min: 3
+# Nodes per graph: Avg: 190.40100953449243 Median: 183.0 Max: 582 Min: 53
+# Reference nodes per graph: Avg: 16.344944774851317 Median: 17.0 Max: 25 Min: 3

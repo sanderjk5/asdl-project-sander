@@ -1,4 +1,4 @@
-# The added dockerfile which works without nvidia cuda.
+# The newly added dockerfile which works without nvidia cuda.
 FROM python:3.8-slim
 
 RUN apt update && \
