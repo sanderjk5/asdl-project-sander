@@ -25,9 +25,9 @@ The file '/gnn-model/buglocalization-gnn.py' contains the implementation of a gn
 It is possible to configure which defined scenario described in my report should be executed with the option '--scenario=<scenario>'. The following scenarios exists:
 * 1: All bug patterns; unrestricted number of reference nodes
 * 2: All bug patterns; maximal 25 reference nodes
-* 3: Without the bug patterns "VarMisuse", "ArgSwap", "WrongLiterals"; unrestricted number of reference nodes
-* 4: Without the bug patterns "VarMisuse", "ArgSwap", "WrongLiterals"; maximal 25 reference nodes
-* 5: Only the bug pattern "WrongLoopStatements"; unrestricted number of reference nodes
-* 6: Only the bug pattern "WrongLoopStatements"; maximal 25 reference nodes
+* 3: Without the bug patterns "Variable Misuses", "Argument Swaps", "Wrong Literals"; unrestricted number of reference nodes
+* 4: Without the bug patterns "Variable Misuses", "Argument Swaps", "Wrong Literals"; maximal 25 reference nodes
+* 5: Only the bug pattern "Wrong Loop Statements"; unrestricted number of reference nodes
+* 6: Only the bug pattern "Wrong Loop Statements"; maximal 25 reference nodes
 
 The input folders must contain files with graphs in the format defined by Buglab. The results will be stored in the textfile 'evaluation.txt'. Additional plots show the accuracy and the loss over all training epochs.
